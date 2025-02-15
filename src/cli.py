@@ -45,6 +45,14 @@ def transcribe():
 def transcribe_video(file_path, api_key, drive_url):
     if not api_key:
         api_key = click.prompt('OpenAI API key', hide_input=True)
+    
+    # Expandir la ruta del usuario
+    file_path = os.path.expanduser(file_path)
+    
+    # Verificar que el archivo existe
+    if not os.path.exists(file_path):
+        logger.error(f"El archivo no existe: {file_path}")
+        sys.exit(1)
     """
     Transcribe and analyze a video file.
 
