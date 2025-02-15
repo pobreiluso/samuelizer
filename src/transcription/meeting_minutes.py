@@ -34,15 +34,21 @@ class AudioTranscriptionService:
 
     def transcribe(self, audio_file_path):
         try:
+            file_size = os.path.getsize(audio_file_path) / (1024 * 1024)  # Tamaño en MB
+            logger.info(f"Procesando archivo de audio de {file_size:.2f} MB")
+            
             with tqdm(total=100, desc="Transcribiendo audio", unit="%") as pbar:
                 with open(audio_file_path, 'rb') as audio_file:
-                    pbar.update(50)  # Actualizar al empezar la transcripción
+                    pbar.update(25)  # Inicio de la transcripción
+                    logger.info("Enviando archivo a OpenAI...")
                     transcription = openai.audio.transcriptions.create(
                         model=self.model,
-                        file=audio_file
+                        file=audio_file,
+                        response_format="text"
                     )
-                    pbar.update(50)  # Completar la barra al finalizar
-            return transcription.text
+                    pbar.update(75)  # Completar la barra
+                    logger.info("Transcripción completada exitosamente")
+            return transcription
         except openai.AuthenticationError as e:
             logger.error(f"Authentication failed: {e}")
             raise TranscriptionError(f"Authentication failed: {e}") from e

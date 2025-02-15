@@ -81,8 +81,14 @@ def transcribe_video(file_path, api_key, drive_url):
             audio_file = AudioExtractor.extract_audio(file_path)
         
         # Transcribe audio
+        logger.info(f"Iniciando transcripción del archivo: {audio_file}")
         service = AudioTranscriptionService()
-        transcription = service.transcribe(audio_file)
+        try:
+            transcription = service.transcribe(audio_file)
+            logger.info(f"Transcripción completada. Longitud del texto: {len(transcription)} caracteres")
+        except Exception as e:
+            logger.error(f"Error durante la transcripción: {str(e)}")
+            raise
         
         analyzer = MeetingAnalyzer(transcription)
         meeting_info = {}
