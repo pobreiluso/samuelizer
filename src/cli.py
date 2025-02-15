@@ -56,8 +56,12 @@ def transcribe_video(api_key, file_path, drive_url):
             video_file = VideoDownloader.download_from_google_drive(drive_url)
             file_path = video_file
 
-        # Extract audio from video
-        audio_file = AudioExtractor.extract_audio(file_path)
+        # Check if file is already MP3
+        if file_path.lower().endswith('.mp3'):
+            audio_file = file_path
+        else:
+            # Extract audio from video
+            audio_file = AudioExtractor.extract_audio(file_path)
         
         # Transcribe audio
         service = AudioTranscriptionService()
