@@ -1,6 +1,7 @@
 import requests
 import json
 import logging
+import click
 from datetime import datetime, timezone
 
 class SlackAPIError(Exception):
@@ -212,7 +213,7 @@ def main():
 
     try:
         config = SlackConfig(
-            token=token,
+            token=args.token,
             channel_id=args.channel_id,
             start_date=args.start_date,
             end_date=args.end_date,
