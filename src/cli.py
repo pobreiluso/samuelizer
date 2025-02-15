@@ -4,6 +4,7 @@ import glob
 import click
 import os
 import json
+import openai
 from typing import Optional
 from src.transcription.meeting_minutes import (
     AudioTranscriptionService,
