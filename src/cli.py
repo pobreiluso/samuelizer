@@ -6,6 +6,7 @@ import os
 import json
 import openai
 from typing import Optional
+from tqdm import tqdm
 from src.transcription.meeting_minutes import (
     AudioTranscriptionService,
     MeetingAnalyzer, 
@@ -84,12 +85,17 @@ def transcribe_video(file_path, api_key, drive_url):
         transcription = service.transcribe(audio_file)
         
         analyzer = MeetingAnalyzer(transcription)
-        meeting_info = {
-            'abstract_summary': analyzer.summarize(),
-            'key_points': analyzer.extract_key_points(),
-            'action_items': analyzer.extract_action_items(),
-            'sentiment': analyzer.analyze_sentiment()
-        }
+        meeting_info = {}
+        
+        with tqdm(total=4, desc="Analizando contenido", unit="tarea") as pbar:
+            meeting_info['abstract_summary'] = analyzer.summarize()
+            pbar.update(1)
+            meeting_info['key_points'] = analyzer.extract_key_points()
+            pbar.update(1)
+            meeting_info['action_items'] = analyzer.extract_action_items()
+            pbar.update(1)
+            meeting_info['sentiment'] = analyzer.analyze_sentiment()
+            pbar.update(1)
 
         DocumentManager.save_to_docx(meeting_info, 'video_summary.docx')
         logger.info("Document saved: video_summary.docx")

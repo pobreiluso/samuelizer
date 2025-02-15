@@ -18,13 +18,16 @@ class AudioExtractor:
                 logger.info("Audio extraction cancelled by user.")
                 return output_audio
 
-        logger.info("Starting audio extraction with ffmpeg...")
-        subprocess.run([
-            'ffmpeg',
-            '-i', input_video,
-            '-b:a', bitrate,
-            '-vn',
-            output_audio
-        ], check=True)
-        logger.info(f"Audio successfully extracted to {output_audio}")
+        with tqdm(total=100, desc="Extrayendo audio", unit="%") as pbar:
+            logger.info("Starting audio extraction with ffmpeg...")
+            pbar.update(10)
+            subprocess.run([
+                'ffmpeg',
+                '-i', input_video,
+                '-b:a', bitrate,
+                '-vn',
+                output_audio
+            ], check=True)
+            pbar.update(90)
+            logger.info(f"Audio successfully extracted to {output_audio}")
         return output_audio

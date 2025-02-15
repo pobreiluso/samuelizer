@@ -33,11 +33,14 @@ class AudioTranscriptionService:
 
     def transcribe(self, audio_file_path):
         try:
-            with open(audio_file_path, 'rb') as audio_file:
-                transcription = openai.audio.transcriptions.create(
-                    model=self.model,
-                    file=audio_file
-                )
+            with tqdm(total=100, desc="Transcribiendo audio", unit="%") as pbar:
+                with open(audio_file_path, 'rb') as audio_file:
+                    pbar.update(50)  # Actualizar al empezar la transcripción
+                    transcription = openai.audio.transcriptions.create(
+                        model=self.model,
+                        file=audio_file
+                    )
+                    pbar.update(50)  # Completar la barra al finalizar
             return transcription.text
         except openai.AuthenticationError as e:
             logger.error(f"Authentication failed: {e}")
