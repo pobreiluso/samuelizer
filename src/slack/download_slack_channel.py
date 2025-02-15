@@ -198,6 +198,7 @@ def parse_arguments():
     
     parser.add_argument(
         '--token',
+        default=os.getenv("SLACK_TOKEN"),
         help='Token de Slack (también puede usar la variable de entorno SLACK_TOKEN)'
     )
 
@@ -206,11 +207,8 @@ def parse_arguments():
 def main():
     args = parse_arguments()
     
-    # Obtener token de los argumentos o variable de entorno
-    token = args.token or os.getenv("SLACK_TOKEN")
-    if not token:
-        logging.error("Token de Slack no proporcionado. Use --token o la variable de entorno SLACK_TOKEN")
-        sys.exit(1)
+    if not args.token:
+        args.token = click.prompt('Slack Token', hide_input=True)
 
     try:
         config = SlackConfig(

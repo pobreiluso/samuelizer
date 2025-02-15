@@ -39,10 +39,12 @@ def transcribe():
     pass
 
 @transcribe.command('video')
-@click.argument('api_key')
 @click.argument('file_path')
+@click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 @click.option('--drive_url', required=False, help='Google Drive URL to download video.')
-def transcribe_video(api_key, file_path, drive_url):
+def transcribe_video(file_path, api_key, drive_url):
+    if not api_key:
+        api_key = click.prompt('OpenAI API key', hide_input=True)
     """
     Transcribe and analyze a video file.
 
@@ -95,8 +97,10 @@ def summarize():
 
 @summarize.command('text')
 @click.argument('text')
-@click.option('--api_key', prompt=True, hide_input=True, help='OpenAI API key.')
+@click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 def summarize_text_command(text, api_key):
+    if not api_key:
+        api_key = click.prompt('OpenAI API key', hide_input=True)
     """
     Summarize a provided text.
 
