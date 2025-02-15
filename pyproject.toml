@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "samuelizer"
+version = "0.1.0"
+description = "AI Agent for summarizing Slack Channels, Threads, Meets..."
+authors = ["ajerez <ajerez@freepik.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+aider-install = "^0.1.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
