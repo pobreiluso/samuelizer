@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "AI Agent for summarizing Slack Channels, Threads, Meets..."
 authors = ["ajerez <ajerez@freepik.com>"]
 readme = "README.md"
+packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -29,6 +30,3 @@ build-backend = "poetry.core.masonry.api"
 cli-agent = "src.cli:cli"
 download-slack = "src.slack.download_slack_channel:main"
 transcribe-meeting = "src.transcription.meeting_minutes:main"
-
-[tool.poetry]
-packages = [{include = "src"}]
