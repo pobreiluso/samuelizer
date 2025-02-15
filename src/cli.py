@@ -169,12 +169,22 @@ def slack():
 @click.option('--start-date', type=click.DateTime(formats=["%Y-%m-%d"]), help='Start date in YYYY-MM-DD format')
 @click.option('--end-date', type=click.DateTime(formats=["%Y-%m-%d"]), help='End date in YYYY-MM-DD format')
 @click.option('--output-dir', default='slack_exports', help='Directory to save messages')
-@click.option('--token', help='Slack token. Can also use SLACK_TOKEN env var')
-def download_slack_messages(channel_id, start_date, end_date, output_dir, token):
+@click.option('--token', help='Slack token. Can also use SLACK_TOKEN env var', default=lambda: os.environ.get('SLACK_TOKEN', None))
+@click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
+def download_slack_messages(channel_id, start_date, end_date, output_dir, token, api_key):
     """
     Download and summarize messages from a Slack channel.
 
     CHANNEL_ID: Slack channel ID (e.g., C01234567)
+    
+    You can find the channel ID by:
+    1. Right-clicking on the channel in Slack
+    2. Select 'Copy link'
+    3. The ID is the last part of the URL (e.g., C01234567)
+    
+    Required environment variables or options:
+    - SLACK_TOKEN or --token: Your Slack Bot User OAuth Token
+    - OPENAI_API_KEY or --api_key: Your OpenAI API key
     """
     try:
         slack_config = SlackConfig(
