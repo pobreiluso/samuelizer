@@ -164,16 +164,16 @@ def slack():
     """Commands related to Slack operations."""
     pass
 
-@slack.command('download')
+@slack.command('analyze')
 @click.argument('channel_id')
 @click.option('--start-date', type=click.DateTime(formats=["%Y-%m-%d"]), help='Start date in YYYY-MM-DD format')
 @click.option('--end-date', type=click.DateTime(formats=["%Y-%m-%d"]), help='End date in YYYY-MM-DD format')
 @click.option('--output-dir', default='slack_exports', help='Directory to save messages')
 @click.option('--token', help='Slack token. Can also use SLACK_TOKEN env var', default=lambda: os.environ.get('SLACK_TOKEN', None))
 @click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
-def download_slack_messages(channel_id, start_date, end_date, output_dir, token, api_key):
+def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, api_key):
     """
-    Download and summarize messages from a Slack channel.
+    Download, analyze and summarize messages from a Slack channel.
 
     CHANNEL_ID: Slack channel ID (e.g., C01234567)
     
@@ -181,6 +181,13 @@ def download_slack_messages(channel_id, start_date, end_date, output_dir, token,
     1. Right-clicking on the channel in Slack
     2. Select 'Copy link'
     3. The ID is the last part of the URL (e.g., C01234567)
+    
+    This command will:
+    1. Download all messages from the channel
+    2. Generate an abstract summary
+    3. Extract key points and action items
+    4. Perform sentiment analysis
+    5. Save both raw messages (JSON) and analysis (DOCX)
     
     Required environment variables or options:
     - SLACK_TOKEN or --token: Your Slack Bot User OAuth Token

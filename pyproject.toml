@@ -29,5 +29,5 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 cli-agent = "src.cli:cli"
-download-slack = "src.slack.download_slack_channel:main"
+analyze-slack = "src.slack.download_slack_channel:main"
 transcribe-meeting = "src.transcription.meeting_minutes:main"
