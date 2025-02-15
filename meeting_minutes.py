@@ -5,6 +5,26 @@ import subprocess
 from docx import Document
 import openai
 import webbrowser
+import logging
+from transcription.exceptions import (
+    TranscriptionError,
+    AnalysisError,
+    DownloadError,
+    AudioExtractionError,
+    MeetingMinutesError
+)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('meeting_minutes.log'),
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 
 class AudioTranscriptionService:
@@ -12,12 +32,19 @@ class AudioTranscriptionService:
         self.model = model
 
     def transcribe(self, audio_file_path):
-        with open(audio_file_path, 'rb') as audio_file:
-            transcription = openai.audio.transcriptions.create(
-                model=self.model,
-                file=audio_file
-            )
-        return transcription.text
+        try:
+            with open(audio_file_path, 'rb') as audio_file:
+                transcription = openai.audio.transcriptions.create(
+                    model=self.model,
+                    file=audio_file
+                )
+            return transcription.text
+        except openai.error.OpenAIError as e:
+            logger.error(f"Transcription failed: {e}")
+            raise TranscriptionError(f"Transcription failed: {e}") from e
+        except Exception as e:
+            logger.error(f"Unexpected error during transcription: {e}")
+            raise TranscriptionError(f"Unexpected error during transcription: {e}") from e
 
 
 class MeetingAnalyzer:
@@ -37,15 +64,22 @@ class MeetingAnalyzer:
         return self._get_openai_response("analyze the sentiment of the following text", message_key='message')
 
     def _get_openai_response(self, task_description, message_key='message.content'):
-        response = openai.chat.completions.create(
-            model="gpt-4-1106-preview",
-            temperature=0,
-            messages=[
-                {"role": "system", "content": f"You are an AI {task_description}."},
-                {"role": "user", "content": self.transcription}
-            ]
-        )
-        return response.choices[0].message.content
+        try:
+            response = openai.chat.completions.create(
+                model="gpt-4-1106-preview",
+                temperature=0,
+                messages=[
+                    {"role": "system", "content": f"You are an AI {task_description}."},
+                    {"role": "user", "content": self.transcription}
+                ]
+            )
+            return response.choices[0].message.content
+        except openai.error.OpenAIError as e:
+            logger.error(f"Analysis failed: {e}")
+            raise AnalysisError(f"Analysis failed: {e}") from e
+        except Exception as e:
+            logger.error(f"Unexpected error during analysis: {e}")
+            raise AnalysisError(f"Unexpected error during analysis: {e}") from e
 
 
 class DocumentManager:
@@ -107,16 +141,16 @@ def login_with_google():
 
 def main(api_key, file_path):
     try:
-        print("Beginning video transcription process...")
+        logger.info("Beginning video transcription process...")
 
         # login_with_google()
         audio_file = AudioExtractor.extract_audio(file_path)
-        print("Audio extracted, starting transcription...")
+        logger.info("Audio extracted, starting transcription...")
 
         transcription_text = AudioTranscriptionService().transcribe(audio_file)
-        print("Transcription completed.")
+        logger.info("Transcription completed.")
 
-        print("Analyzing transcription...")
+        logger.info("Analyzing transcription...")
         analyzer = MeetingAnalyzer(transcription_text)
         meeting_info = {
             'abstract_summary': analyzer.summarize(),
@@ -124,24 +158,27 @@ def main(api_key, file_path):
             'action_items': analyzer.extract_action_items(),
             'sentiment': analyzer.analyze_sentiment()
         }
-        print("Analysis completed.")
+        logger.info("Analysis completed.")
 
-        print("Saving analyzed information to document...")
+        logger.info("Saving analyzed information to document...")
         DocumentManager.save_to_docx(meeting_info, 'meeting_minutes.docx')
-        print("Document saved: meeting_minutes.docx")
+        logger.info("Document saved: meeting_minutes.docx")
 
-        print("\nMeeting Information:")
+        logger.info("\nMeeting Information:")
         for section, content in meeting_info.items():
-            print(f"{section.title().replace('_', ' ')}:\n{content}\n")
+            logger.info(f"{section.title().replace('_', ' ')}:\n{content}\n")
 
-
+    except MeetingMinutesError as e:
+        logger.error(f"MeetingMinutesError occurred: {e}")
+        sys.exit(1)
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logger.error(f"An unexpected error occurred: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python transcribe_video.py api_key file_path")
+        logger.error("Usage: python transcribe_video.py api_key file_path")
         sys.exit(1)
 
     main(sys.argv[1], sys.argv[2])
