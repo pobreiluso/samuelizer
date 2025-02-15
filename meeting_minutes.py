@@ -111,18 +111,18 @@ class VideoDownloader:
 class AudioExtractor:
     @staticmethod
     def extract_audio(input_video, bitrate='56k'):
-        print(f"Extracting audio from {input_video}...")
+        logger.info(f"Extracting audio from {input_video}...")
         output_audio = input_video.replace('.mp4', '.mp3')
         if os.path.exists(output_audio):
             answer = input("Output audio file already exists. Delete it? (yes/no): ")
             if answer.lower() == 'yes':
-                print(f"Deleting {output_audio}...")
+                logger.info(f"Deleting {output_audio}...")
                 os.remove(output_audio)
             else:
-                print("Audio extraction cancelled by user.")
+                logger.info("Audio extraction cancelled by user.")
                 return output_audio
 
-        print("Starting audio extraction with ffmpeg...")
+        logger.info("Starting audio extraction with ffmpeg...")
         subprocess.run([
             'ffmpeg',
             '-i', input_video,
@@ -130,7 +130,7 @@ class AudioExtractor:
             '-vn',
             output_audio
         ], check=True)
-        print(f"Audio successfully extracted to {output_audio}")
+        logger.info(f"Audio successfully extracted to {output_audio}")
         return output_audio
 
 
