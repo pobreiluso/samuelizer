@@ -7,9 +7,20 @@ logger = logging.getLogger(__name__)
 
 class AudioExtractor:
     @staticmethod
-    def extract_audio(input_video, bitrate='56k'):
-        logger.info(f"Extracting audio from {input_video}...")
-        output_audio = input_video.replace('.mp4', '.mp3')
+    @staticmethod
+    def get_supported_formats():
+        return ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4a', '.wav', '.aac', '.mp3', '.ogg']
+
+    @staticmethod
+    def extract_audio(input_file, bitrate='56k'):
+        logger.info(f"Processing media file: {input_file}...")
+        
+        # Si ya es un archivo de audio soportado, retornarlo directamente
+        if input_file.lower().endswith(('.mp3', '.wav', '.m4a', '.aac', '.ogg')):
+            logger.info("File is already an audio file, skipping extraction")
+            return input_file
+            
+        output_audio = os.path.splitext(input_file)[0] + '.mp3'
         if os.path.exists(output_audio):
             answer = input("Output audio file already exists. Delete it? (yes/no): ")
             if answer.lower() == 'yes':

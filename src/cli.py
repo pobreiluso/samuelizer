@@ -39,11 +39,11 @@ def transcribe():
     """Commands related to audio/video transcription."""
     pass
 
-@transcribe.command('video')
+@transcribe.command('media')
 @click.argument('file_path')
 @click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
-@click.option('--drive_url', required=False, help='Google Drive URL to download video.')
-def transcribe_video(file_path, api_key, drive_url):
+@click.option('--drive_url', required=False, help='Google Drive URL to download media file.')
+def transcribe_media(file_path, api_key, drive_url):
     if not api_key:
         api_key = click.prompt('OpenAI API key', hide_input=True)
     
@@ -55,11 +55,16 @@ def transcribe_video(file_path, api_key, drive_url):
         logger.error(f"El archivo no existe: {file_path}")
         sys.exit(1)
     """
-    Transcribe and analyze a video file.
+    Transcribe and analyze any media file (video or audio).
 
-    API_KEY: OpenAI API key
-    FILE_PATH: Path to video file
+    FILE_PATH: Path to media file (supported formats: mp4, avi, mkv, mov, wmv, flv, webm, mp3, wav, m4a, aac, ogg)
     """
+    supported_formats = AudioExtractor.get_supported_formats()
+    file_ext = os.path.splitext(file_path)[1].lower()
+    
+    if file_ext not in supported_formats:
+        logger.error(f"Formato de archivo no soportado. Formatos soportados: {', '.join(supported_formats)}")
+        sys.exit(1)
     try:
         if not api_key:
             logger.error("No se ha proporcionado la API key de OpenAI")
