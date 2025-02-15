@@ -37,17 +37,36 @@ class AudioTranscriptionService:
             file_size = os.path.getsize(audio_file_path) / (1024 * 1024)  # Tamaño en MB
             logger.info(f"Procesando archivo de audio de {file_size:.2f} MB")
             
-            with tqdm(total=100, desc="Transcribiendo audio", unit="%") as pbar:
+            with tqdm(total=100, desc="Transcribiendo audio", unit="%", colour='green') as pbar:
+                # Actualizar progreso: Preparación
+                pbar.update(10)
+                logger.info("Preparando archivo para transcripción...")
+                
+                # Actualizar progreso: Abriendo archivo
                 with open(audio_file_path, 'rb') as audio_file:
-                    pbar.update(25)  # Inicio de la transcripción
+                    pbar.update(20)
                     logger.info("Enviando archivo a OpenAI...")
+                    
+                    # Actualizar progreso: Enviando a OpenAI
+                    pbar.update(20)
+                    
+                    # Realizar la transcripción
                     transcription = openai.audio.transcriptions.create(
                         model=self.model,
                         file=audio_file,
                         response_format="text"
                     )
-                    pbar.update(75)  # Completar la barra
+                    
+                    # Actualizar progreso: Transcripción completada
+                    pbar.update(40)
                     logger.info("Transcripción completada exitosamente")
+                    
+                    # Mostrar información sobre el resultado
+                    if transcription:
+                        char_count = len(transcription)
+                        word_count = len(transcription.split())
+                        logger.info(f"Transcripción generada: {word_count} palabras, {char_count} caracteres")
+                    
             return transcription
         except openai.AuthenticationError as e:
             logger.error(f"Authentication failed: {e}")
