@@ -74,9 +74,12 @@ class MeetingAnalyzer:
                 ]
             )
             return response.choices[0].message.content
-        except openai.error.OpenAIError as e:
-            logger.error(f"Analysis failed: {e}")
-            raise AnalysisError(f"Analysis failed: {e}") from e
+        except openai.AuthenticationError as e:
+            logger.error(f"OpenAI Authentication Error: {e}")
+            raise AnalysisError(f"Authentication failed: {e}") from e
+        except openai.APIError as e:
+            logger.error(f"OpenAI API Error: {e}")
+            raise AnalysisError(f"API Error: {e}") from e
         except Exception as e:
             logger.error(f"Unexpected error during analysis: {e}")
             raise AnalysisError(f"Unexpected error during analysis: {e}") from e

@@ -101,6 +101,12 @@ def summarize_text_command(text, api_key):
     except KeyboardInterrupt:
         logger.info("Process interrupted by user.")
         sys.exit(0)
+    except openai.AuthenticationError as e:
+        logger.error(f"OpenAI Authentication Error: {e}")
+        sys.exit(1)
+    except openai.APIError as e:
+        logger.error(f"OpenAI API Error: {e}")
+        sys.exit(1)
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
         sys.exit(1)
