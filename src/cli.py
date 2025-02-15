@@ -5,6 +5,7 @@ import click
 import os
 import json
 import openai
+import time
 from typing import Optional
 from tqdm import tqdm
 from src.transcription.meeting_minutes import (
@@ -285,6 +286,49 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
         sys.exit(0)
     except Exception as e:
         logging.error(f"Unexpected error while summarizing Slack messages: {e}")
+        sys.exit(1)
+
+@cli.command('listen')
+@click.option('--duration', type=int, help='Duration in seconds (0 for continuous)', default=0)
+@click.option('--output-dir', default='recordings', help='Directory to save recordings')
+@click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
+@click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
+def listen_command(duration, output_dir, api_key, output):
+    """
+    Listen and transcribe system audio in real-time.
+    
+    This will capture all system audio, including:
+    - Video calls (Google Meet, Teams, Zoom)
+    - System sounds
+    - Microphone input
+    - Audio from headphones
+    """
+    try:
+        from src.audio_capture.system_audio import SystemAudioCapture
+        
+        recorder = SystemAudioCapture()
+        recorder.start_recording(output_dir)
+        
+        if duration > 0:
+            click.echo(f"Recording for {duration} seconds...")
+            time.sleep(duration)
+        else:
+            click.echo("Recording... Press Ctrl+C to stop")
+            while True:
+                time.sleep(1)
+                
+    except KeyboardInterrupt:
+        click.echo("\nStopping recording...")
+        audio_file = recorder.stop_recording()
+        
+        if api_key:
+            click.echo("Transcribing recorded audio...")
+            transcribe_media(audio_file, api_key, None, '32k', output)
+        else:
+            click.echo(f"Audio saved to: {audio_file}")
+            
+    except Exception as e:
+        logger.error(f"Error during recording: {e}")
         sys.exit(1)
 
 @cli.command()
