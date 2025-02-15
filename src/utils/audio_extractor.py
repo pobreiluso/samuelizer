@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 class AudioExtractor:
     @staticmethod
-    @staticmethod
     def get_supported_formats():
         return ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4a', '.wav', '.aac', '.mp3', '.ogg']
 
@@ -35,7 +34,7 @@ class AudioExtractor:
             pbar.update(10)
             subprocess.run([
                 'ffmpeg',
-                '-i', input_video,
+                '-i', input_file,
                 '-b:a', bitrate,
                 '-vn',
                 output_audio
