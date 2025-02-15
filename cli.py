@@ -2,6 +2,8 @@ import sys
 import logging
 import glob
 import click
+import os
+import json
 from typing import Optional
 from transcription.meeting_minutes import (
     AudioTranscriptionService,
@@ -76,6 +78,34 @@ def transcribe_video(api_key, file_path, drive_url):
         sys.exit(1)
 
 @cli.group()
+def summarize():
+    """Commands related to text summarization."""
+    pass
+
+@summarize.command('text')
+@click.argument('text')
+@click.option('--api_key', prompt=True, hide_input=True, help='OpenAI API key.')
+def summarize_text_command(text, api_key):
+    """
+    Summarize a provided text.
+
+    TEXT: Text to summarize.
+    """
+    try:
+        analyzer = MeetingAnalyzer(text)
+        summary = analyzer.summarize()
+        click.echo(f"Summary: {summary}")
+    except MeetingMinutesError as e:
+        logger.error(f"Error summarizing text: {e}")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        logger.info("Process interrupted by user.")
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        sys.exit(1)
+
+@cli.group()
 def slack():
     """Commands related to Slack operations."""
     pass
@@ -141,29 +171,6 @@ def download_slack_messages(channel_id, start_date, end_date, output_dir, token)
         sys.exit(0)
     except Exception as e:
         logging.error(f"Unexpected error while summarizing Slack messages: {e}")
-        sys.exit(1)
-
-@summarize.command('text')
-@click.argument('text')
-@click.option('--api_key', prompt=True, hide_input=True, help='OpenAI API key.')
-def summarize_text_command(text, api_key):
-    """
-    Summarize a provided text.
-
-    TEXT: Text to summarize.
-    """
-    try:
-        analyzer = MeetingAnalyzer(text)
-        summary = analyzer.summarize()
-        click.echo(f"Summary: {summary}")
-    except MeetingMinutesError as e:
-        logger.error(f"Error summarizing text: {e}")
-        sys.exit(1)
-    except KeyboardInterrupt:
-        logger.info("Process interrupted by user.")
-        sys.exit(0)
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}")
         sys.exit(1)
 
 @cli.command()
