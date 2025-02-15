@@ -124,9 +124,9 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output):
             click.echo()
 
         # Guardar en docx si se solicita
-        if output_file:
-            DocumentManager.save_to_docx(meeting_info, output_file)
-            logger.info(f"Document saved: {output_file}")
+        if output:
+            DocumentManager.save_to_docx(meeting_info, output)
+            logger.info(f"Document saved: {output}")
 
     except MeetingMinutesError as e:
         logger.error(f"Error transcribing video: {e}")
