@@ -5,15 +5,15 @@ import click
 import os
 import json
 from typing import Optional
-from transcription.meeting_minutes import (
+from src.transcription.meeting_minutes import (
     AudioTranscriptionService,
     MeetingAnalyzer, 
     DocumentManager,
     VideoDownloader
 )
-from slack.download_slack_channel import SlackDownloader, SlackConfig
-from transcription.exceptions import MeetingMinutesError
-from utils.audio_extractor import AudioExtractor
+from src.slack.download_slack_channel import SlackDownloader, SlackConfig
+from src.transcription.exceptions import MeetingMinutesError
+from src.utils.audio_extractor import AudioExtractor
 
 # Configure logging
 logging.basicConfig(

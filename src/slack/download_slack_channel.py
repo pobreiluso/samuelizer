@@ -16,7 +16,7 @@ import os
 from dataclasses import dataclass
 import argparse
 import sys
-from config.config import Config
+from src.config.config import Config
 
 # Initialize configuration
 config = Config()
