@@ -31,15 +31,10 @@ logger = logging.getLogger(__name__)
 
 @click.group()
 def cli():
-    """CLI agent for summarizing videos, audios, and Slack conversations."""
+    """Samuelizer - AI-powered summarization tool."""
     pass
 
-@cli.group()
-def transcribe():
-    """Commands related to audio/video transcription."""
-    pass
-
-@transcribe.command('media')
+@cli.command('media')
 @click.argument('file_path')
 @click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 @click.option('--drive_url', required=False, help='Google Drive URL to download media file.')
@@ -56,9 +51,19 @@ def transcribe_media(file_path, api_key, drive_url, optimize):
         logger.error(f"El archivo no existe: {file_path}")
         sys.exit(1)
     """
-    Transcribe and analyze any media file (video or audio).
+    Summarize and analyze any media file (video or audio).
 
-    FILE_PATH: Path to media file (supported formats: mp4, avi, mkv, mov, wmv, flv, webm, mp3, wav, m4a, aac, ogg)
+    FILE_PATH: Path to media file
+    Supported formats: mp4, avi, mkv, mov, wmv, flv, webm, mp3, wav, m4a, aac, ogg
+    
+    The file will be:
+    1. Optimized for processing (if needed)
+    2. Transcribed to text
+    3. Analyzed to extract:
+       - Abstract summary
+       - Key points
+       - Action items
+       - Sentiment analysis
     """
     supported_formats = AudioExtractor.get_supported_formats()
     file_ext = os.path.splitext(file_path)[1].lower()
@@ -122,21 +127,22 @@ def transcribe_media(file_path, api_key, drive_url, optimize):
         logger.error(f"Unexpected error: {e}")
         sys.exit(1)
 
-@cli.group()
-def summarize():
-    """Commands related to text summarization."""
-    pass
-
-@summarize.command('text')
+@cli.command('text')
 @click.argument('text')
 @click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 def summarize_text_command(text, api_key):
     if not api_key:
         api_key = click.prompt('OpenAI API key', hide_input=True)
     """
-    Summarize a provided text.
+    Analyze and summarize a text.
 
-    TEXT: Text to summarize.
+    TEXT: Text to analyze
+    
+    The text will be analyzed to extract:
+    - Abstract summary
+    - Key points
+    - Action items
+    - Sentiment analysis
     """
     try:
         openai.api_key = api_key
@@ -159,12 +165,7 @@ def summarize_text_command(text, api_key):
         logger.error(f"Unexpected error: {e}")
         sys.exit(1)
 
-@cli.group()
-def slack():
-    """Commands related to Slack operations."""
-    pass
-
-@slack.command('analyze')
+@cli.command('slack')
 @click.argument('channel_id')
 @click.option('--start-date', type=click.DateTime(formats=["%Y-%m-%d"]), help='Start date in YYYY-MM-DD format')
 @click.option('--end-date', type=click.DateTime(formats=["%Y-%m-%d"]), help='End date in YYYY-MM-DD format')
@@ -173,25 +174,27 @@ def slack():
 @click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, api_key):
     """
-    Download, analyze and summarize messages from a Slack channel.
+    Analyze and summarize a Slack channel.
 
     CHANNEL_ID: Slack channel ID (e.g., C01234567)
     
     You can find the channel ID by:
     1. Right-clicking on the channel in Slack
     2. Select 'Copy link'
-    3. The ID is the last part of the URL (e.g., C01234567)
+    3. The ID is the last part of the URL
     
-    This command will:
-    1. Download all messages from the channel
-    2. Generate an abstract summary
-    3. Extract key points and action items
-    4. Perform sentiment analysis
-    5. Save both raw messages (JSON) and analysis (DOCX)
+    The channel messages will be:
+    1. Downloaded and saved as JSON
+    2. Analyzed to extract:
+       - Abstract summary
+       - Key points
+       - Action items
+       - Sentiment analysis
+    3. Results saved as DOCX
     
-    Required environment variables or options:
-    - SLACK_TOKEN or --token: Your Slack Bot User OAuth Token
-    - OPENAI_API_KEY or --api_key: Your OpenAI API key
+    Required:
+    - SLACK_TOKEN or --token: Slack Bot User OAuth Token
+    - OPENAI_API_KEY or --api_key: OpenAI API key
     """
     try:
         slack_config = SlackConfig(
