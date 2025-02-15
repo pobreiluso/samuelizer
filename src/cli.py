@@ -60,8 +60,21 @@ def transcribe_video(file_path, api_key, drive_url):
     FILE_PATH: Path to video file
     """
     try:
+        if not api_key:
+            logger.error("No se ha proporcionado la API key de OpenAI")
+            sys.exit(1)
+            
+        # Configurar OpenAI
         openai.api_key = api_key
         
+        # Verificar la API key
+        try:
+            # Intenta una llamada simple para verificar la API key
+            openai.models.list()
+        except openai.AuthenticationError as e:
+            logger.error(f"API key de OpenAI inválida: {e}")
+            sys.exit(1)
+            
         if drive_url:
             video_file = VideoDownloader.download_from_google_drive(drive_url)
             file_path = video_file
