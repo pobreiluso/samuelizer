@@ -39,7 +39,8 @@ def cli():
 @click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 @click.option('--drive_url', required=False, help='Google Drive URL to download media file.')
 @click.option('--optimize', default='32k', help='Target bitrate for audio optimization (e.g. 32k, 64k)')
-def transcribe_media(file_path, api_key, drive_url, optimize):
+@click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
+def transcribe_media(file_path, api_key, drive_url, optimize, output):
     if not api_key:
         api_key = click.prompt('OpenAI API key', hide_input=True)
     
@@ -114,8 +115,18 @@ def transcribe_media(file_path, api_key, drive_url, optimize):
             meeting_info['sentiment'] = analyzer.analyze_sentiment()
             pbar.update(1)
 
-        DocumentManager.save_to_docx(meeting_info, 'video_summary.docx')
-        logger.info("Document saved: video_summary.docx")
+        # Mostrar resultados en CLI
+        click.echo("\n=== Resumen de la Samuelización ===")
+        for key, value in meeting_info.items():
+            click.echo(f"\n{key.replace('_', ' ').title()}:")
+            click.echo("-" * 40)
+            click.echo(value)
+            click.echo()
+
+        # Guardar en docx si se solicita
+        if output_file:
+            DocumentManager.save_to_docx(meeting_info, output_file)
+            logger.info(f"Document saved: {output_file}")
 
     except MeetingMinutesError as e:
         logger.error(f"Error transcribing video: {e}")
@@ -130,7 +141,8 @@ def transcribe_media(file_path, api_key, drive_url, optimize):
 @cli.command('text')
 @click.argument('text')
 @click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
-def summarize_text_command(text, api_key):
+@click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
+def summarize_text_command(text, api_key, output):
     if not api_key:
         api_key = click.prompt('OpenAI API key', hide_input=True)
     """
@@ -147,8 +159,25 @@ def summarize_text_command(text, api_key):
     try:
         openai.api_key = api_key
         analyzer = MeetingAnalyzer(text)
-        summary = analyzer.summarize()
-        click.echo(f"Summary: {summary}")
+        meeting_info = {
+            'abstract_summary': analyzer.summarize(),
+            'key_points': analyzer.extract_key_points(),
+            'action_items': analyzer.extract_action_items(),
+            'sentiment': analyzer.analyze_sentiment()
+        }
+
+        # Mostrar resultados en CLI
+        click.echo("\n=== Resumen del Texto ===")
+        for key, value in meeting_info.items():
+            click.echo(f"\n{key.replace('_', ' ').title()}:")
+            click.echo("-" * 40)
+            click.echo(value)
+            click.echo()
+
+        # Guardar en docx si se solicita
+        if output:
+            DocumentManager.save_to_docx(meeting_info, output)
+            logger.info(f"Document saved: {output}")
     except MeetingMinutesError as e:
         logger.error(f"Error summarizing text: {e}")
         sys.exit(1)
@@ -172,7 +201,8 @@ def summarize_text_command(text, api_key):
 @click.option('--output-dir', default='slack_exports', help='Directory to save messages')
 @click.option('--token', help='Slack token. Can also use SLACK_TOKEN env var', default=lambda: os.environ.get('SLACK_TOKEN', None))
 @click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
-def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, api_key):
+@click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
+def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, api_key, output):
     """
     Analyze and summarize a Slack channel.
 
@@ -234,8 +264,18 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
             'sentiment': analyzer.analyze_sentiment()
         }
         
-        DocumentManager.save_to_docx(meeting_info, 'slack_summary.docx')
-        logging.info("Summary document saved: slack_summary.docx")
+        # Mostrar resultados en CLI
+        click.echo("\n=== Resumen del Canal de Slack ===")
+        for key, value in meeting_info.items():
+            click.echo(f"\n{key.replace('_', ' ').title()}:")
+            click.echo("-" * 40)
+            click.echo(value)
+            click.echo()
+
+        # Guardar en docx si se solicita
+        if output_file:
+            DocumentManager.save_to_docx(meeting_info, output_file)
+            logger.info(f"Document saved: {output_file}")
     
     except MeetingMinutesError as e:
         logging.error(f"Error processing Slack messages: {e}")
