@@ -93,6 +93,7 @@ def summarize_text_command(text, api_key):
     TEXT: Text to summarize.
     """
     try:
+        openai.api_key = api_key
         analyzer = MeetingAnalyzer(text)
         summary = analyzer.summarize()
         click.echo(f"Summary: {summary}")
