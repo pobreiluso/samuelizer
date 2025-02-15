@@ -8,26 +8,33 @@ import os
 from dataclasses import dataclass
 import argparse
 import sys
+from config.config import Config
 
-# Configuración de logging
+# Initialize configuration
+config = Config()
+
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('slack_download.log'),
+        logging.FileHandler(config.LOG_FILE),
         logging.StreamHandler()
     ]
 )
 
+logger = logging.getLogger(__name__)
+
 @dataclass
 class SlackConfig:
+    """Configuration for Slack API interactions"""
     token: str
     channel_id: str
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-    output_dir: str = "slack_exports"
-    rate_limit_delay: float = 1.0
-    batch_size: int = 1000
+    output_dir: str = Config.OUTPUT_DIR
+    rate_limit_delay: float = Config.SLACK_RATE_LIMIT_DELAY
+    batch_size: int = Config.SLACK_BATCH_SIZE
 
 class SlackDownloader:
     def __init__(self, config: SlackConfig):
@@ -39,27 +46,38 @@ class SlackDownloader:
             os.makedirs(config.output_dir)
 
     def get_channel_info(self) -> Dict:
-        """Obtiene información del canal"""
+        """
+        Obtiene información del canal de Slack
+        
+        Returns:
+            Dict: Información del canal
+            
+        Raises:
+            SlackAPIError: Si hay un error en la API de Slack
+            RequestError: Si hay un error en la solicitud HTTP
+            JSONDecodeError: Si la respuesta no es JSON válido
+        """
         url = f"{self.base_url}/conversations.info"
         params = {"channel": self.config.channel_id}
         
         try:
-            response = requests.get(url, headers=self.headers, params=params)
-            response.raise_for_status()
-            data = response.json()
-            
-            if not data.get("ok"):
-                error_msg = data.get("error", "Unknown error")
-                logging.error(f"Error from Slack API: {error_msg}")
-                raise Exception(f"Slack API error: {error_msg}")
-            
-            return data
-            
+            with requests.Session() as session:
+                response = session.get(url, headers=self.headers, params=params, verify=True)
+                response.raise_for_status()
+                data = response.json()
+                
+                if not data.get("ok"):
+                    error_msg = data.get("error", "Unknown error")
+                    logger.error(f"Error from Slack API: {error_msg}")
+                    raise SlackAPIError(f"Slack API error: {error_msg}")
+                
+                return data
+                
         except requests.exceptions.RequestException as e:
-            logging.error(f"Request failed: {str(e)}")
-            raise
+            logger.error(f"Request failed: {str(e)}")
+            raise RequestError(f"Failed to connect to Slack API: {str(e)}")
         except json.JSONDecodeError as e:
-            logging.error(f"Invalid JSON response: {str(e)}")
+            logger.error(f"Invalid JSON response: {str(e)}")
             raise
 
     def convert_date_to_ts(self, date: datetime) -> str:
