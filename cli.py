@@ -2,6 +2,7 @@ import sys
 import logging
 import glob
 import click
+from typing import Optional
 from transcription.meeting_minutes import (
     AudioTranscriptionService,
     MeetingAnalyzer, 
@@ -19,6 +20,18 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('cli_agent.log'),
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 @click.group()
 def cli():
@@ -93,7 +106,16 @@ def download_slack_messages(channel_id, start_date, end_date, output_dir, token)
     CHANNEL_ID: ID del canal de Slack (ej: C01234567)
     """
     try:
-        download_slack(channel_id=channel_id, start_date=start_date, end_date=end_date, output_dir=output_dir, token=token)
+        slack_config = SlackConfig(
+            token=token,
+            channel_id=channel_id,
+            start_date=start_date,
+            end_date=end_date,
+            output_dir=output_dir
+        )
+        downloader = SlackDownloader(slack_config)
+        messages = downloader.fetch_messages()
+        output_file = downloader.save_messages(messages)
         
         import glob
         import os
@@ -146,7 +168,19 @@ def summarize_file_command(file_path, api_key):
     FILE_PATH: Ruta al archivo de audio o video.
     """
     try:
-        transcribe_meeting(api_key, file_path)
+        service = AudioTranscriptionService()
+        transcription = service.transcribe(file_path)
+        
+        analyzer = MeetingAnalyzer(transcription)
+        meeting_info = {
+            'abstract_summary': analyzer.summarize(),
+            'key_points': analyzer.extract_key_points(),
+            'action_items': analyzer.extract_action_items(),
+            'sentiment': analyzer.analyze_sentiment()
+        }
+
+        DocumentManager.save_to_docx(meeting_info, 'summary.docx')
+        logger.info("Document saved: summary.docx")
     except MeetingMinutesError as e:
         logging.error(f"Error en sumarizar el archivo: {e}")
         sys.exit(1)
