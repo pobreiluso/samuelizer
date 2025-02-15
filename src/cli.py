@@ -43,7 +43,8 @@ def transcribe():
 @click.argument('file_path')
 @click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 @click.option('--drive_url', required=False, help='Google Drive URL to download media file.')
-def transcribe_media(file_path, api_key, drive_url):
+@click.option('--optimize', default='32k', help='Target bitrate for audio optimization (e.g. 32k, 64k)')
+def transcribe_media(file_path, api_key, drive_url, optimize):
     if not api_key:
         api_key = click.prompt('OpenAI API key', hide_input=True)
     
@@ -83,7 +84,7 @@ def transcribe_media(file_path, api_key, drive_url):
             audio_file = file_path
         else:
             # Extract audio from video
-            audio_file = AudioExtractor.extract_audio(file_path)
+            audio_file = AudioExtractor.extract_audio(file_path, target_bitrate=optimize)
         
         # Transcribe audio
         logger.info(f"Iniciando transcripción del archivo: {audio_file}")
