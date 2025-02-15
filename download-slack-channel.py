@@ -2,6 +2,14 @@ import requests
 import json
 import logging
 from datetime import datetime, timezone
+
+class SlackAPIError(Exception):
+    """Raised when Slack API returns an error response"""
+    pass
+
+class RequestError(Exception):
+    """Raised when there is an error making HTTP requests"""
+    pass
 import time
 from typing import Dict, List, Optional
 import os
