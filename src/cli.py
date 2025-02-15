@@ -290,7 +290,7 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
 @cli.command()
 def version():
     """Displays the CLI agent version."""
-    click.echo("samuelizer version 0.1.0")
+    click.echo("samuelizer version 1.0.0")
 
 if __name__ == '__main__':
     try:
