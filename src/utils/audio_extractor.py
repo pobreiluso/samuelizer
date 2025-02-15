@@ -1,6 +1,7 @@
 import os
 import subprocess
 import logging
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 

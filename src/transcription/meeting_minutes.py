@@ -6,6 +6,7 @@ from src.utils.audio_extractor import AudioExtractor
 import openai
 import webbrowser
 import logging
+from tqdm import tqdm
 from src.transcription.exceptions import (
     TranscriptionError,
     AnalysisError,
