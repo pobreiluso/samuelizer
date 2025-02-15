@@ -1,0 +1,135 @@
+2025-02-15 22:02:23,335 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-02-15 22:02:23,339 - ERROR - Unexpected error: module 'openai' has no attribute 'error'
+2025-02-15 22:03:05,854 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-02-15 22:03:05,860 - ERROR - OpenAI Authentication Error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:03:05,861 - ERROR - Error summarizing text: Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:03:35,788 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-02-15 22:03:35,795 - ERROR - OpenAI Authentication Error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:03:35,796 - ERROR - Error summarizing text: Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:04:17,504 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:04:46,376 - ERROR - Unexpected error: module 'openai' has no attribute 'error'
+2025-02-15 22:04:56,078 - ERROR - Unexpected error: list index out of range
+2025-02-15 22:05:23,129 - INFO - Extracting audio from ejemplo.mp4...
+2025-02-15 22:05:23,129 - INFO - Starting audio extraction with ffmpeg...
+2025-02-15 22:05:23,362 - ERROR - Unexpected error: Command '['ffmpeg', '-i', 'ejemplo.mp4', '-b:a', '56k', '-vn', 'ejemplo.mp3']' returned non-zero exit status 254.
+2025-02-15 22:07:40,365 - INFO - HTTP Request: POST https://api.openai.com/v1/audio/transcriptions "HTTP/1.1 401 Unauthorized"
+2025-02-15 22:07:40,371 - ERROR - Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-api-k********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:07:40,372 - ERROR - Error transcribing video: Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-api-k********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:10:26,840 - ERROR - Unexpected error during transcription: [Errno 2] No such file or directory: 'reunion-capu.mp3'
+2025-02-15 22:10:26,840 - ERROR - Error transcribing video: Unexpected error during transcription: [Errno 2] No such file or directory: 'reunion-capu.mp3'
+2025-02-15 22:11:33,278 - ERROR - Unexpected error during transcription: [Errno 2] No such file or directory: '~/Documents/reunion-capu.mp3'
+2025-02-15 22:11:33,278 - ERROR - Error transcribing video: Unexpected error during transcription: [Errno 2] No such file or directory: '~/Documents/reunion-capu.mp3'
+2025-02-15 22:12:11,668 - ERROR - Unexpected error during transcription: [Errno 2] No such file or directory: '~/Documents/reunion-capu.mp3'
+2025-02-15 22:12:11,668 - ERROR - Error transcribing video: Unexpected error during transcription: [Errno 2] No such file or directory: '~/Documents/reunion-capu.mp3'
+2025-02-15 22:12:52,533 - INFO - HTTP Request: POST https://api.openai.com/v1/audio/transcriptions "HTTP/1.1 401 Unauthorized"
+2025-02-15 22:12:52,539 - ERROR - Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:12:52,539 - ERROR - Error transcribing video: Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:13:32,633 - INFO - HTTP Request: GET https://api.openai.com/v1/models "HTTP/1.1 401 Unauthorized"
+2025-02-15 22:13:32,637 - ERROR - API key de OpenAI inválida: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:14:07,769 - INFO - HTTP Request: GET https://api.openai.com/v1/models "HTTP/1.1 401 Unauthorized"
+2025-02-15 22:14:07,772 - ERROR - API key de OpenAI inválida: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:19:53,764 - INFO - Process interrupted by user.
+2025-02-15 22:22:58,170 - INFO - HTTP Request: POST https://api.openai.com/v1/audio/transcriptions "HTTP/1.1 401 Unauthorized"
+2025-02-15 22:22:58,177 - ERROR - Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:22:58,178 - ERROR - Error transcribing video: Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:23:26,583 - INFO - Process interrupted by user.
+2025-02-15 22:25:06,088 - INFO - HTTP Request: POST https://api.openai.com/v1/audio/transcriptions "HTTP/1.1 401 Unauthorized"
+2025-02-15 22:25:06,095 - ERROR - Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:25:06,096 - ERROR - Error transcribing video: Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:25:21,472 - INFO - Process interrupted by user.
+2025-02-15 22:26:47,813 - INFO - Process interrupted by user.
+2025-02-15 22:35:42,636 - INFO - Iniciando transcripción del archivo: /Users/ajerez/Documents/reunion-capu.mp3
+2025-02-15 22:35:42,636 - INFO - Procesando archivo de audio de 22.74 MB
+2025-02-15 22:35:42,641 - INFO - Enviando archivo a OpenAI...
+2025-02-15 22:36:51,721 - INFO - Iniciando transcripción del archivo: /Users/ajerez/Documents/reunion-capu.mp3
+2025-02-15 22:36:51,721 - INFO - Procesando archivo de audio de 22.74 MB
+2025-02-15 22:36:51,726 - INFO - Preparando archivo para transcripción...
+2025-02-15 22:36:51,726 - INFO - Enviando archivo a OpenAI...
+2025-02-15 22:36:56,853 - INFO - HTTP Request: POST https://api.openai.com/v1/audio/transcriptions "HTTP/1.1 401 Unauthorized"
+2025-02-15 22:36:56,860 - ERROR - Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:36:56,861 - ERROR - Error durante la transcripción: Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:36:56,861 - ERROR - Error transcribing video: Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:37:03,939 - INFO - Process interrupted by user.
+2025-02-15 22:37:05,506 - INFO - Iniciando transcripción del archivo: /Users/ajerez/Documents/reunion-capu.mp3
+2025-02-15 22:37:05,507 - INFO - Procesando archivo de audio de 22.74 MB
+2025-02-15 22:37:05,512 - INFO - Preparando archivo para transcripción...
+2025-02-15 22:37:05,512 - INFO - Enviando archivo a OpenAI...
+2025-02-15 22:37:10,101 - INFO - Process interrupted by user.
+2025-02-15 22:37:25,391 - INFO - Processing media file: /Users/ajerez/Documents/reunion-labs-unity.m4a...
+2025-02-15 22:37:25,396 - INFO - Starting audio extraction with ffmpeg...
+2025-02-15 22:37:29,384 - INFO - Audio successfully extracted to /Users/ajerez/Documents/reunion-labs-unity_optimized_32k.mp3
+2025-02-15 22:37:29,384 - INFO - Iniciando transcripción del archivo: /Users/ajerez/Documents/reunion-labs-unity_optimized_32k.mp3
+2025-02-15 22:37:29,384 - INFO - Procesando archivo de audio de 8.85 MB
+2025-02-15 22:37:29,384 - INFO - Preparando archivo para transcripción...
+2025-02-15 22:37:29,385 - INFO - Enviando archivo a OpenAI...
+2025-02-15 22:39:16,772 - INFO - HTTP Request: POST https://api.openai.com/v1/audio/transcriptions "HTTP/1.1 200 OK"
+2025-02-15 22:39:16,806 - INFO - Transcripción completada exitosamente
+2025-02-15 22:39:16,808 - INFO - Transcripción generada: 5755 palabras, 31410 caracteres
+2025-02-15 22:39:16,809 - INFO - Transcripción completada. Longitud del texto: 31410 caracteres
+2025-02-15 22:39:24,640 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:39:38,479 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:39:52,324 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:40:03,709 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:40:03,756 - INFO - Document saved: video_summary.docx
+2025-02-15 22:44:43,763 - INFO - Descargando página 1...
+2025-02-15 22:44:44,059 - ERROR - Unexpected error while summarizing Slack messages: Error en la API de Slack: not_allowed_token_type
+2025-02-15 22:45:21,776 - INFO - Descargando página 1...
+2025-02-15 22:45:22,186 - ERROR - Unexpected error while summarizing Slack messages: Error en la API de Slack: channel_not_found
+2025-02-15 22:45:47,840 - INFO - Descargando página 1...
+2025-02-15 22:45:48,805 - INFO - Descargados 293 mensajes
+2025-02-15 22:45:48,834 - INFO - Latest message file: slack_exports/slack_messages_C5C0XV9L0_from_20240101_to_20240215_20250215_224548.json
+2025-02-15 22:45:49,263 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-02-15 22:45:49,268 - ERROR - OpenAI Authentication Error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:45:49,268 - ERROR - Error processing Slack messages: Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:45:57,872 - INFO - Descargando página 1...
+2025-02-15 22:45:59,043 - INFO - Descargados 293 mensajes
+2025-02-15 22:45:59,071 - INFO - Latest message file: slack_exports/slack_messages_C5C0XV9L0_from_20240101_to_20240215_20250215_224559.json
+2025-02-15 22:46:08,866 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:48:43,724 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:51:26,804 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:51:33,459 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:51:33,503 - INFO - Summary document saved: slack_summary.docx
+2025-02-15 22:55:15,015 - ERROR - El archivo no existe: meeting.mp4
+2025-02-15 22:55:16,583 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-02-15 22:55:16,588 - ERROR - OpenAI Authentication Error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:55:16,588 - ERROR - Error summarizing text: Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 22:55:17,918 - INFO - Descargando página 1...
+2025-02-15 22:55:18,273 - ERROR - Unexpected error while summarizing Slack messages: Error en la API de Slack: invalid_auth
+2025-02-15 22:55:38,412 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:56:34,263 - INFO - Descargando página 1...
+2025-02-15 22:56:35,239 - INFO - Descargados 293 mensajes
+2025-02-15 22:56:35,269 - INFO - Latest message file: slack_exports/slack_messages_C5C0XV9L0_from_20240101_to_20240215_20250215_225635.json
+2025-02-15 22:56:44,861 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:56:56,198 - INFO - Process interrupted by user.
+2025-02-15 22:57:20,769 - INFO - Descargando página 1...
+2025-02-15 22:57:21,231 - INFO - Descargados 0 mensajes
+2025-02-15 22:57:21,235 - INFO - Latest message file: slack_exports/slack_messages_C5C0XV9L0_from_20250214_to_20250214_20250215_225721.json
+2025-02-15 22:57:21,236 - INFO - No messages to summarize.
+2025-02-15 22:57:29,323 - INFO - Descargando página 1...
+2025-02-15 22:57:29,762 - INFO - Descargados 4 mensajes
+2025-02-15 22:57:29,767 - INFO - Latest message file: slack_exports/slack_messages_C5C0XV9L0_from_20250214_to_20250215_20250215_225729.json
+2025-02-15 22:57:37,983 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:57:48,669 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:57:57,572 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:58:08,559 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 22:58:08,600 - INFO - Summary document saved: slack_summary.docx
+2025-02-15 23:00:33,867 - ERROR - El archivo no existe: audio.mp3
+2025-02-15 23:00:35,369 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-02-15 23:00:35,374 - ERROR - OpenAI Authentication Error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 23:00:35,374 - ERROR - Error summarizing text: Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 23:00:36,679 - INFO - Descargando página 1...
+2025-02-15 23:00:36,951 - ERROR - Unexpected error while summarizing Slack messages: Error en la API de Slack: invalid_auth
+2025-02-15 23:00:38,262 - ERROR - El archivo no existe: audio.mp3
+2025-02-15 23:00:39,772 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-02-15 23:00:39,777 - ERROR - OpenAI Authentication Error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 23:00:39,777 - ERROR - Error summarizing text: Authentication failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: tu-clave**********enai. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-15 23:00:41,089 - INFO - Descargando página 1...
+2025-02-15 23:00:41,476 - ERROR - Unexpected error while summarizing Slack messages: Error en la API de Slack: invalid_auth
+2025-02-15 23:01:01,444 - INFO - Descargando página 1...
+2025-02-15 23:01:01,943 - INFO - Descargados 4 mensajes
+2025-02-15 23:01:01,949 - INFO - Latest message file: slack_exports/slack_messages_C5C0XV9L0_from_20250214_to_20250215_20250215_230101.json
+2025-02-15 23:01:11,022 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 23:01:25,449 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 23:01:39,991 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 23:01:48,533 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-02-15 23:01:48,587 - INFO - Document saved: slack_exports/slack_messages_C5C0XV9L0_from_20250214_to_20250215_20250215_230101.json
