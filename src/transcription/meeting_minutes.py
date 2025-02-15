@@ -2,11 +2,11 @@ import os
 import requests
 import sys
 from docx import Document
-from utils.audio_extractor import AudioExtractor
+from src.utils.audio_extractor import AudioExtractor
 import openai
 import webbrowser
 import logging
-from transcription.exceptions import (
+from src.transcription.exceptions import (
     TranscriptionError,
     AnalysisError,
     DownloadError,
