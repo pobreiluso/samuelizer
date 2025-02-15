@@ -30,6 +30,5 @@ cli-agent = "src.cli:cli"
 download-slack = "src.slack.download_slack_channel:main"
 transcribe-meeting = "src.transcription.meeting_minutes:main"
 
-[tool.poetry.packages]
-[[tool.poetry.packages]]
-include = "src"
+[tool.poetry]
+packages = [{include = "src"}]
