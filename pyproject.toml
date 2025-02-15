@@ -26,6 +26,9 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-cli-agent = "samuelizer.cli:cli"
-download-slack = "samuelizer.slack.download_slack_channel:main"
-transcribe-meeting = "samuelizer.transcription.meeting_minutes:main"
+cli-agent = "src.cli:cli"
+download-slack = "src.slack.download_slack_channel:main"
+transcribe-meeting = "src.transcription.meeting_minutes:main"
+
+[tool.poetry.packages]
+packages = [{include = "src"}]
