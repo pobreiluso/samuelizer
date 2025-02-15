@@ -50,12 +50,18 @@ def transcribe_video(api_key, file_path, drive_url):
     FILE_PATH: Path to video file
     """
     try:
+        openai.api_key = api_key
+        
         if drive_url:
             video_file = VideoDownloader.download_from_google_drive(drive_url)
             file_path = video_file
 
+        # Extract audio from video
+        audio_file = AudioExtractor.extract_audio(file_path)
+        
+        # Transcribe audio
         service = AudioTranscriptionService()
-        transcription = service.transcribe(file_path)
+        transcription = service.transcribe(audio_file)
         
         analyzer = MeetingAnalyzer(transcription)
         meeting_info = {

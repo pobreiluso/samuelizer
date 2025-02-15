@@ -39,9 +39,12 @@ class AudioTranscriptionService:
                     file=audio_file
                 )
             return transcription.text
-        except openai.error.OpenAIError as e:
-            logger.error(f"Transcription failed: {e}")
-            raise TranscriptionError(f"Transcription failed: {e}") from e
+        except openai.AuthenticationError as e:
+            logger.error(f"Authentication failed: {e}")
+            raise TranscriptionError(f"Authentication failed: {e}") from e
+        except openai.APIError as e:
+            logger.error(f"API Error: {e}")
+            raise TranscriptionError(f"API Error: {e}") from e
         except Exception as e:
             logger.error(f"Unexpected error during transcription: {e}")
             raise TranscriptionError(f"Unexpected error during transcription: {e}") from e
