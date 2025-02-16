@@ -1,25 +1,25 @@
 import os
 from dotenv import load_dotenv
 
-# Cargar variables de entorno desde archivo .env
+# Load environment variables from .env file
 load_dotenv()
 
 class Config:
     """
-    Gestión global de configuración del sistema.
+    Global system configuration management.
     
-    Esta clase centraliza todas las configuraciones y variables de entorno necesarias
-    para el funcionamiento de la aplicación.
+    This class centralizes all configurations and environment variables
+    needed for the application to function.
     
-    Atributos:
-        SLACK_TOKEN (str): Token de autenticación para la API de Slack
-        OPENAI_API_KEY (str): Clave de API para servicios de OpenAI
-        GOOGLE_CLIENT_ID (str): ID de cliente para autenticación con Google
-        GOOGLE_CLIENT_SECRET (str): Secreto de cliente para autenticación con Google
-        SLACK_RATE_LIMIT_DELAY (float): Delay entre peticiones a la API de Slack (en segundos)
-        SLACK_BATCH_SIZE (int): Número de mensajes por petición a la API de Slack
-        OUTPUT_DIR (str): Directorio para archivos de salida
-        LOG_FILE (str): Ruta del archivo de logs
+    Attributes:
+        SLACK_TOKEN (str): Authentication token for Slack API
+        OPENAI_API_KEY (str): API key for OpenAI services
+        GOOGLE_CLIENT_ID (str): Client ID for Google authentication
+        GOOGLE_CLIENT_SECRET (str): Client secret for Google authentication
+        SLACK_RATE_LIMIT_DELAY (float): Delay between Slack API requests (in seconds)
+        SLACK_BATCH_SIZE (int): Number of messages per Slack API request
+        OUTPUT_DIR (str): Directory for output files
+        LOG_FILE (str): Path to log file
     """
     
     # Credenciales de APIs
