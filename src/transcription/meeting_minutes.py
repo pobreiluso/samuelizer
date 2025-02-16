@@ -79,35 +79,31 @@ class AudioTranscriptionService:
             raise TranscriptionError(f"Unexpected error during transcription: {e}") from e
 
 
+from .templates import PromptTemplates
+
 class MeetingAnalyzer:
     def __init__(self, transcription):
         self.transcription = transcription
+        self.prompt_templates = PromptTemplates()
 
-    def summarize(self):
-        return self._get_openai_response("summarize into a concise abstract paragraph")
+    def analyze(self, template_name: str, **kwargs) -> str:
+        """Analiza el texto usando un template específico"""
+        template = self.prompt_templates.get_template(template_name, **kwargs)
+        
+        messages = [
+            {"role": "system", "content": template["system"]},
+            {"role": "user", "content": template["template"].format(text=self.transcription)}
+        ]
 
-    def extract_key_points(self):
-        return self._get_openai_response("identify and list the main points")
-
-    def extract_action_items(self):
-        return self._get_openai_response("extract action items")
-
-    def analyze_sentiment(self):
-        return self._get_openai_response("analyze the sentiment of the following text", message_key='message')
-
-    def _get_openai_response(self, task_description, message_key='message.content'):
         try:
             response = openai.chat.completions.create(
                 model="gpt-4-1106-preview",
                 temperature=0,
-                messages=[
-                    {"role": "system", "content": f"You are an AI {task_description}."},
-                    {"role": "user", "content": self.transcription}
-                ]
+                messages=messages
             )
             return response.choices[0].message.content
         except openai.AuthenticationError as e:
-            logger.error(f"OpenAI Authentication Error: {e}")
+            logger.error(f"Error en el análisis con template '{template_name}': {e}")
             raise AnalysisError(f"Authentication failed: {e}") from e
         except openai.APIError as e:
             logger.error(f"OpenAI API Error: {e}")
@@ -115,6 +111,18 @@ class MeetingAnalyzer:
         except Exception as e:
             logger.error(f"Unexpected error during analysis: {e}")
             raise AnalysisError(f"Unexpected error during analysis: {e}") from e
+
+    def summarize(self, **kwargs):
+        return self.analyze("summary", **kwargs)
+
+    def extract_key_points(self, **kwargs):
+        return self.analyze("key_points", **kwargs)
+
+    def extract_action_items(self, **kwargs):
+        return self.analyze("action_items", **kwargs)
+
+    def analyze_sentiment(self, **kwargs):
+        return self.analyze("sentiment", **kwargs)
 
 
 class DocumentManager:
