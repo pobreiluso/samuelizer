@@ -79,28 +79,32 @@ class PromptTemplates:
         },
 
         "default": {
-            "system": "You are an AI specialized in creating concise and comprehensive summaries.",
+            "system": "You are an AI specialized in creating concise and comprehensive summaries with a friendly and visually appealing format.",
             "template": """
             Analiza el siguiente texto y genera un resumen estructurado que incluya:
 
-            1. RESUMEN EJECUTIVO (máximo 3 frases)
-            - Captura la esencia del mensaje sin detalles innecesarios
+            📝 Resumen ejecutivo
+            • Captura la esencia del mensaje en máximo 3 frases
+            • Usa lenguaje claro y directo
             
-            2. PUNTOS CLAVE (máximo 5 puntos)
-            - Lista solo los puntos verdaderamente importantes
-            - Evita redundancias y detalles secundarios
+            ⭐️ Puntos clave
+            • Lista solo los puntos verdaderamente importantes
+            • Cada punto debe aportar valor único
+            • Usa viñetas para mejor legibilidad
             
-            3. ACCIONES REQUERIDAS
-            - Lista solo las tareas concretas y accionables
-            - Incluye responsable y plazo si se mencionan
-            - Omite tareas ambiguas o sin dueño claro
+            ✅ Acciones a realizar
+            • [ ] Tareas concretas y accionables
+            • [ ] Incluye @responsable y 📅 plazo si se mencionan
+            • [ ] Omite tareas sin dueño claro
 
-            4. SENTIMIENTO GENERAL (1-2 frases)
-            - Tono dominante y cambios significativos
-            - Solo si es relevante para el contexto
+            💭 Sentimiento
+            • Tono general y cambios relevantes
+            • Solo si aporta contexto importante
 
-            Usa lenguaje directo y conciso.
-            Evita TODA información redundante o secundaria.
+            Usa formato markdown para resaltar elementos importantes:
+            - Usa **negrita** para énfasis
+            - Usa `código` para referencias técnicas
+            - Usa > para citas importantes
             
             Texto a analizar:
             {text}
