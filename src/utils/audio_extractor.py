@@ -13,7 +13,21 @@ class AudioExtractor:
 
     @staticmethod
     def get_audio_info(file_path):
-        """Obtiene información del archivo de audio usando ffprobe"""
+        """
+        Get audio file information using ffprobe.
+        
+        Args:
+            file_path (str): Path to the audio file
+            
+        Returns:
+            dict: Audio stream information containing:
+                - bit_rate: Current bitrate
+                - codec_name: Audio codec used
+                
+        Raises:
+            subprocess.CalledProcessError: If ffprobe command fails
+            json.JSONDecodeError: If ffprobe output is not valid JSON
+        """
         try:
             result = subprocess.run([
                 'ffprobe',
@@ -26,12 +40,26 @@ class AudioExtractor:
             info = json.loads(result.stdout)
             return info.get('streams', [{}])[0]
         except Exception as e:
-            logger.warning(f"No se pudo obtener información del audio: {e}")
+            logger.warning(f"Could not get audio information: {e}")
             return {}
 
     @staticmethod
     def needs_optimization(file_path, target_bitrate='32k'):
-        """Determina si el archivo necesita optimización"""
+        """
+        Determine if the audio file needs optimization.
+        
+        Args:
+            file_path (str): Path to the audio file
+            target_bitrate (str): Target bitrate (e.g., '32k', '64k')
+            
+        Returns:
+            bool: True if file needs optimization, False otherwise
+            
+        Notes:
+            - Non-MP3 files always need optimization
+            - Files with higher bitrate than target need optimization
+            - Files without bitrate info are assumed to need optimization
+        """
         if not file_path.lower().endswith('.mp3'):
             return True
             
@@ -41,17 +69,29 @@ class AudioExtractor:
         if not current_bitrate:
             return True
             
-        # Convertir target_bitrate a bits
+        # Convert target_bitrate to bits
         target_bits = int(target_bitrate.rstrip('k')) * 1024
         
-        # Si el bitrate actual es más alto que el objetivo, necesita optimización
+        # If current bitrate is higher than target, needs optimization
         return int(current_bitrate) > target_bits
 
     @staticmethod
     def extract_audio(input_file, target_bitrate='32k'):
         """
-        Extrae o optimiza el audio para Whisper.
-        target_bitrate: '32k' para calidad baja, '64k' para calidad media
+        Extract or optimize audio for Whisper processing.
+        
+        Args:
+            input_file (str): Path to input media file
+            target_bitrate (str): Target bitrate for optimization
+                                 '32k' for low quality
+                                 '64k' for medium quality
+                                 
+        Returns:
+            str: Path to the processed audio file
+            
+        Raises:
+            subprocess.CalledProcessError: If ffmpeg command fails
+            OSError: If file operations fail
         """
         logger.info(f"Processing media file: {input_file}...")
         
