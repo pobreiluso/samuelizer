@@ -41,7 +41,8 @@ def cli():
 @click.option('--drive_url', required=False, help='Google Drive URL to download media file.')
 @click.option('--optimize', default='32k', help='Target bitrate for audio optimization (e.g. 32k, 64k)')
 @click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
-def transcribe_media(file_path, api_key, drive_url, optimize, output):
+@click.option('--template', default='summary', help='Analysis template to use (summary, executive, quick)')
+def transcribe_media(file_path, api_key, drive_url, optimize, output, template):
     if not api_key:
         api_key = click.prompt('OpenAI API key', hide_input=True)
     
@@ -104,17 +105,21 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output):
             raise
         
         analyzer = MeetingAnalyzer(transcription)
-        meeting_info = {}
         
-        with tqdm(total=4, desc="Analizando contenido", unit="tarea") as pbar:
-            meeting_info['abstract_summary'] = analyzer.summarize()
-            pbar.update(1)
-            meeting_info['key_points'] = analyzer.extract_key_points()
-            pbar.update(1)
-            meeting_info['action_items'] = analyzer.extract_action_items()
-            pbar.update(1)
-            meeting_info['sentiment'] = analyzer.analyze_sentiment()
-            pbar.update(1)
+        if template == 'all':
+            meeting_info = {}
+            with tqdm(total=4, desc="Analizando contenido", unit="tarea") as pbar:
+                meeting_info['abstract_summary'] = analyzer.summarize()
+                pbar.update(1)
+                meeting_info['key_points'] = analyzer.extract_key_points()
+                pbar.update(1)
+                meeting_info['action_items'] = analyzer.extract_action_items()
+                pbar.update(1)
+                meeting_info['sentiment'] = analyzer.analyze_sentiment()
+                pbar.update(1)
+        else:
+            result = analyzer.analyze(template)
+            meeting_info = {template: result}
 
         # Mostrar resultados en CLI
         click.echo("\n=== Resumen de la Samuelización ===")
