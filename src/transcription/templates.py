@@ -43,14 +43,14 @@ class PromptTemplates:
         "action_items": {
             "system": "You are an AI extract action items.",
             "template": """
-            Extrae los elementos accionables del siguiente texto.
-            Para cada acción:
-            - Debe ser una tarea concreta
-            - Debe identificar responsables (si se mencionan)
-            - Debe incluir plazos o fechas límite (si se mencionan)
-            - Debe estar en formato de tarea
+            Extract actionable items from the following text.
+            For each action:
+            - Must be a concrete task
+            - Must identify owners (if mentioned)
+            - Must include deadlines (if mentioned)
+            - Must be in task format
 
-            Texto a analizar:
+            Text to analyze:
             {text}
             """,
             "parameters": {
@@ -63,13 +63,13 @@ class PromptTemplates:
         "sentiment": {
             "system": "You are an AI analyze the sentiment of the following text.",
             "template": """
-            Realiza un análisis de sentimiento del siguiente texto considerando:
-            - Tono general de la conversación
-            - Cambios de sentimiento durante el texto
-            - Reacciones a temas específicos
-            - Nivel de acuerdo/desacuerdo entre participantes
+            Perform a sentiment analysis of the following text considering:
+            - General tone of the conversation
+            - Sentiment changes throughout the text
+            - Reactions to specific topics
+            - Level of agreement/disagreement between participants
 
-            Texto a analizar:
+            Text to analyze:
             {text}
             """,
             "parameters": {
@@ -81,32 +81,32 @@ class PromptTemplates:
         "default": {
             "system": "You are an AI specialized in creating concise and comprehensive summaries with a friendly and visually appealing format.",
             "template": """
-            Analiza el siguiente texto y genera un resumen estructurado que incluya:
+            Analyze the following text and generate a structured summary including:
 
-            📝 Resumen ejecutivo
-            • Captura la esencia del mensaje en máximo 3 frases
-            • Usa lenguaje claro y directo
+            📝 Executive Summary
+            • Capture the message essence in max 3 sentences
+            • Use clear and direct language
             
-            ⭐️ Puntos clave
-            • Lista solo los puntos verdaderamente importantes
-            • Cada punto debe aportar valor único
-            • Usa viñetas para mejor legibilidad
+            ⭐️ Key Points
+            • List only truly important points
+            • Each point must provide unique value
+            • Use bullets for better readability
             
-            ✅ Acciones a realizar
-            • [ ] Tareas concretas y accionables
-            • [ ] Incluye @responsable y 📅 plazo si se mencionan
-            • [ ] Omite tareas sin dueño claro
+            ✅ Action Items
+            • [ ] Concrete and actionable tasks
+            • [ ] Include @owner and 📅 deadline if mentioned
+            • [ ] Skip tasks without clear owner
 
-            💭 Sentimiento
-            • Tono general y cambios relevantes
-            • Solo si aporta contexto importante
+            💭 Sentiment
+            • General tone and relevant changes
+            • Only if it provides important context
 
-            Usa formato markdown para resaltar elementos importantes:
-            - Usa **negrita** para énfasis
-            - Usa `código` para referencias técnicas
-            - Usa > para citas importantes
+            Use markdown format to highlight important elements:
+            - Use **bold** for emphasis
+            - Use `code` for technical references
+            - Use > for important quotes
             
-            Texto a analizar:
+            Text to analyze:
             {text}
             """,
             "parameters": {
