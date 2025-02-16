@@ -76,6 +76,62 @@ class PromptTemplates:
                 "detail_level": "detailed",
                 "include_quotes": True
             }
+        },
+
+        "executive": {
+            "system": "You are an AI specialized in creating executive summaries for business audiences.",
+            "template": """
+            Genera un resumen ejecutivo estructurado que incluya:
+
+            1. OBJETIVO
+            - Propósito principal de la reunión/documento
+            
+            2. PUNTOS CLAVE
+            - Máximo 3 puntos principales, sin detalles innecesarios
+            
+            3. DECISIONES
+            - Decisiones importantes tomadas
+            
+            4. PRÓXIMOS PASOS
+            - Acciones concretas a realizar
+            - Responsables (si se mencionan)
+            - Plazos (si se especifican)
+
+            5. IMPACTO ESPERADO
+            - Resultados o beneficios esperados
+            
+            Usa lenguaje ejecutivo, directo y orientado a resultados.
+            Evita información redundante o detalles técnicos innecesarios.
+            
+            Texto a analizar:
+            {text}
+            """,
+            "parameters": {
+                "max_length": 800,
+                "style": "executive",
+                "format": "structured"
+            }
+        },
+
+        "quick": {
+            "system": "You are an AI that creates ultra-concise summaries focusing only on essential information.",
+            "template": """
+            Genera un resumen ultra conciso que incluya SOLO:
+            - La idea principal (1 frase)
+            - Los puntos críticos (máximo 3 bullets)
+            - La conclusión o resultado clave (1 frase)
+
+            Evita TODA información redundante o secundaria.
+            Usa lenguaje directo y conciso.
+            
+            Texto a analizar:
+            {text}
+            """,
+            "parameters": {
+                "max_length": 200,
+                "style": "concise",
+                "format": "minimal"
+            }
         }
     }
 
