@@ -51,7 +51,7 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template):
     
     # Verificar que el archivo existe
     if not os.path.exists(file_path):
-        logger.error(f"El archivo no existe: {file_path}")
+        logger.error(f"File does not exist: {file_path}")
         sys.exit(1)
     """
     Summarize and analyze any media file (video or audio).
@@ -72,11 +72,11 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template):
     file_ext = os.path.splitext(file_path)[1].lower()
     
     if file_ext not in supported_formats:
-        logger.error(f"Formato de archivo no soportado. Formatos soportados: {', '.join(supported_formats)}")
+        logger.error(f"Unsupported file format. Supported formats: {', '.join(supported_formats)}")
         sys.exit(1)
     try:
         if not api_key:
-            logger.error("No se ha proporcionado la API key de OpenAI")
+            logger.error("OpenAI API key not provided")
             sys.exit(1)
             
         # Configurar OpenAI
@@ -95,20 +95,20 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template):
             audio_file = AudioExtractor.extract_audio(file_path, target_bitrate=optimize)
         
         # Transcribe audio
-        logger.info(f"Iniciando transcripción del archivo: {audio_file}")
+        logger.info(f"Starting file transcription: {audio_file}")
         service = AudioTranscriptionService()
         try:
             transcription = service.transcribe(audio_file)
-            logger.info(f"Transcripción completada. Longitud del texto: {len(transcription)} caracteres")
+            logger.info(f"Transcription completed. Text length: {len(transcription)} characters")
         except Exception as e:
-            logger.error(f"Error durante la transcripción: {str(e)}")
+            logger.error(f"Error during transcription: {str(e)}")
             raise
         
         analyzer = MeetingAnalyzer(transcription)
         
         if template == 'all':
             meeting_info = {}
-            with tqdm(total=4, desc="Analizando contenido", unit="tarea") as pbar:
+            with tqdm(total=4, desc="Analyzing content", unit="task") as pbar:
                 meeting_info['abstract_summary'] = analyzer.summarize()
                 pbar.update(1)
                 meeting_info['key_points'] = analyzer.extract_key_points()
@@ -122,7 +122,7 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template):
             meeting_info = {template: result}
 
         # Mostrar resultados en CLI
-        click.echo("\n=== Resumen de la Samuelización ===")
+        click.echo("\n=== Samuelization Summary ===")
         for key, value in meeting_info.items():
             click.echo(f"\n{key.replace('_', ' ').title()}:")
             click.echo("-" * 40)
