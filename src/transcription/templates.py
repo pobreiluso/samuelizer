@@ -268,8 +268,14 @@ class PromptTemplates:
     }
 
     def __init__(self):
-        self.templates = self.DEFAULT_TEMPLATES.copy()
-        self.custom_templates = {}
+        self._templates = self.DEFAULT_TEMPLATES.copy()
+        self._custom_templates = {}
+        self._template_cache = {}
+        
+    @property
+    def templates(self):
+        """Read-only access to templates"""
+        return self._templates.copy()
 
     def get_template(self, template_name: str, **kwargs) -> dict:
         """Obtiene un template con parámetros personalizados"""

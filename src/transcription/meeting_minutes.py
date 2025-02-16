@@ -82,9 +82,19 @@ class AudioTranscriptionService:
 from .templates import PromptTemplates
 
 class MeetingAnalyzer:
-    def __init__(self, transcription):
-        self.transcription = transcription
+    def __init__(self, transcription: str):
+        # Split long transcriptions into manageable chunks
+        self.max_chunk_size = 4000  # OpenAI's token limit consideration
+        self.transcription = self._prepare_transcription(transcription)
         self.prompt_templates = PromptTemplates()
+        
+    def _prepare_transcription(self, text: str) -> str:
+        """Prepare transcription for analysis by cleaning and chunking if needed"""
+        if len(text) > self.max_chunk_size:
+            # Split into semantic chunks (at paragraph or sentence boundaries)
+            chunks = [text[i:i+self.max_chunk_size] for i in range(0, len(text), self.max_chunk_size)]
+            return "\n\n".join(chunks)
+        return text
 
     def analyze(self, template_name: str, **kwargs) -> str:
         """

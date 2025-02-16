@@ -76,7 +76,7 @@ class AudioExtractor:
         return int(current_bitrate) > target_bits
 
     @staticmethod
-    def extract_audio(input_file, target_bitrate='32k'):
+    def extract_audio(input_file: str, target_bitrate: str = '32k', chunk_size: int = 8192) -> str:
         """
         Extract or optimize audio for Whisper processing.
         
