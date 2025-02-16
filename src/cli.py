@@ -143,7 +143,9 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output):
 @click.argument('text')
 @click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 @click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
-def summarize_text_command(text, api_key, output):
+@click.option('--template', default='summary', help='Analysis template to use')
+@click.option('--params', help='Additional template parameters in JSON format')
+def summarize_text_command(text, api_key, output, template, params):
     if not api_key:
         api_key = click.prompt('OpenAI API key', hide_input=True)
     """
@@ -159,13 +161,19 @@ def summarize_text_command(text, api_key, output):
     """
     try:
         openai.api_key = api_key
+        template_params = json.loads(params) if params else {}
         analyzer = MeetingAnalyzer(text)
-        meeting_info = {
-            'abstract_summary': analyzer.summarize(),
-            'key_points': analyzer.extract_key_points(),
-            'action_items': analyzer.extract_action_items(),
-            'sentiment': analyzer.analyze_sentiment()
-        }
+        
+        if template == 'all':
+            meeting_info = {
+                'abstract_summary': analyzer.summarize(**template_params),
+                'key_points': analyzer.extract_key_points(**template_params),
+                'action_items': analyzer.extract_action_items(**template_params),
+                'sentiment': analyzer.analyze_sentiment(**template_params)
+            }
+        else:
+            result = analyzer.analyze(template, **template_params)
+            meeting_info = {template: result}
 
         # Mostrar resultados en CLI
         click.echo("\n=== Resumen del Texto ===")
