@@ -19,9 +19,20 @@ class SystemAudioCapture:
         self.current_file = None
         
     def start_recording(self, output_dir="recordings"):
-        """Inicia la grabación del audio del sistema"""
+        """
+        Start system audio recording.
+        
+        Args:
+            output_dir (str): Directory where recordings will be saved
+            
+        Returns:
+            None
+            
+        Note:
+            Creates output directory if it doesn't exist
+        """
         if self.recording:
-            logger.warning("Ya hay una grabación en curso")
+            logger.warning("Recording already in progress")
             return
             
         os.makedirs(output_dir, exist_ok=True)
@@ -39,23 +50,23 @@ class SystemAudioCapture:
         self.save_thread = Thread(target=self._save_audio)
         self.save_thread.start()
         
-        logger.info(f"Iniciando grabación en {self.current_file}")
+        logger.info(f"Starting recording to {self.current_file}")
         
     def _record(self):
-        """Función principal de grabación"""
+        """Main recording function that captures system audio"""
         with sd.InputStream(samplerate=self.sample_rate, 
                           channels=self.channels, 
                           callback=self._audio_callback):
             self.stop_event.wait()
     
     def _audio_callback(self, indata, frames, time, status):
-        """Callback que recibe el audio del sistema"""
+        """Callback that receives system audio data"""
         if status:
             logger.warning(f"Status: {status}")
         self.audio_queue.put(indata.copy())
     
     def _save_audio(self):
-        """Guarda el audio en un archivo WAV"""
+        """Save audio data to WAV file"""
         with wave.open(self.current_file, 'wb') as wf:
             wf.setnchannels(self.channels)
             wf.setsampwidth(2)  # 16 bits
@@ -69,7 +80,12 @@ class SystemAudioCapture:
                     continue
     
     def stop_recording(self):
-        """Detiene la grabación"""
+        """
+        Stop recording and save the file.
+        
+        Returns:
+            str: Path to the saved recording file
+        """
         if not self.recording:
             return
             
@@ -80,5 +96,5 @@ class SystemAudioCapture:
         self.record_thread.join()
         self.save_thread.join()
         
-        logger.info(f"Grabación detenida y guardada en {self.current_file}")
+        logger.info(f"Recording stopped and saved to {self.current_file}")
         return self.current_file
