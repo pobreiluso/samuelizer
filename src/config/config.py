@@ -6,7 +6,10 @@ load_dotenv()
 
 class Config:
     """
-    Global system configuration management.
+    Global system configuration management with validation.
+    
+    Validates required configuration values and provides
+    type checking for critical parameters.
     
     This class centralizes all configurations and environment variables
     needed for the application to function.
