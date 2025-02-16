@@ -216,7 +216,8 @@ def summarize_text_command(text, api_key, output, template, params):
 @click.option('--token', help='Slack token. Can also use SLACK_TOKEN env var', default=lambda: os.environ.get('SLACK_TOKEN', None))
 @click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 @click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
-def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, api_key, output):
+@click.option('--template', default='summary', help='Analysis template to use (summary, executive, quick)')
+def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, api_key, output, template):
     """
     Analyze and summarize a Slack channel.
 
@@ -271,12 +272,17 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
         transcription_text = "\n".join([msg.get('text', '') for msg in messages])
         
         analyzer = MeetingAnalyzer(transcription_text)
-        meeting_info = {
-            'abstract_summary': analyzer.summarize(),
-            'key_points': analyzer.extract_key_points(),
-            'action_items': analyzer.extract_action_items(),
-            'sentiment': analyzer.analyze_sentiment()
-        }
+        
+        if template == 'all':
+            meeting_info = {
+                'abstract_summary': analyzer.summarize(),
+                'key_points': analyzer.extract_key_points(),
+                'action_items': analyzer.extract_action_items(),
+                'sentiment': analyzer.analyze_sentiment()
+            }
+        else:
+            result = analyzer.analyze(template)
+            meeting_info = {template: result}
         
         # Mostrar resultados en CLI
         click.echo("\n=== Resumen del Canal de Slack ===")
