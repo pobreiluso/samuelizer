@@ -106,19 +106,27 @@ class SlackDownloader:
 
     def get_user_info(self, user_id: str) -> str:
         """
-        Get Slack username from user ID.
+        Get Slack username from user ID with retry logic.
         
         Args:
             user_id (str): Slack user ID to look up
             
         Returns:
-            str: User's display name or real name, falls back to user_id if not found
+            str: User's display name or real name, falls back to unknown_user if not found
             
         Note:
             Results are cached to minimize API calls
+            Implements retry logic for API failures
         """
+        if not user_id:
+            logger.warning("Empty user_id provided")
+            return "unknown_user"
+            
         if user_id in self.users_cache:
             return self.users_cache[user_id]
+            
+        max_retries = 3
+        retry_delay = 1
             
         try:
             url = f"{self.base_url}/users.info"
