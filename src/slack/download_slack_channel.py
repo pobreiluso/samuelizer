@@ -56,7 +56,18 @@ class SlackDownloader:
             os.makedirs(config.output_dir)
 
     def get_user_info(self, user_id: str) -> str:
-        """Obtiene el nombre de usuario de Slack dado un ID"""
+        """
+        Get Slack username from user ID.
+        
+        Args:
+            user_id (str): Slack user ID to look up
+            
+        Returns:
+            str: User's display name or real name, falls back to user_id if not found
+            
+        Note:
+            Results are cached to minimize API calls
+        """
         if user_id in self.users_cache:
             return self.users_cache[user_id]
             
@@ -155,7 +166,7 @@ class SlackDownloader:
 
         while True:
             try:
-                logging.info(f"Descargando página {page}...")
+                logging.info(f"Downloading page {page}...")
                 response = requests.get(url, headers=self.headers, params=params)
                 response.raise_for_status()
                 data = response.json()
@@ -166,7 +177,7 @@ class SlackDownloader:
                 messages = data["messages"]
                 processed_messages = [process_message(msg) for msg in messages]
                 all_messages.extend(processed_messages)
-                logging.info(f"Descargados {len(messages)} mensajes")
+                logging.info(f"Downloaded {len(messages)} messages")
 
                 if "next_cursor" in data.get("response_metadata", {}):
                     params["cursor"] = data["response_metadata"]["next_cursor"]
@@ -176,7 +187,7 @@ class SlackDownloader:
                     break
 
             except requests.exceptions.RequestException as e:
-                logging.error(f"Error en la request: {str(e)}")
+                logging.error(f"Request error: {str(e)}")
                 raise
 
         return all_messages
@@ -216,35 +227,35 @@ def parse_date(date_str: str) -> datetime:
         raise argparse.ArgumentTypeError(f"Formato de fecha inválido: {str(e)}")
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='Descarga mensajes de un canal de Slack')
+    parser = argparse.ArgumentParser(description='Download messages from a Slack channel')
     
     parser.add_argument(
         'channel_id',
-        help='ID del canal de Slack (ej: C01234567)'
+        help='Slack channel ID (e.g., C01234567)'
     )
     
     parser.add_argument(
         '--start-date',
         type=parse_date,
-        help='Fecha de inicio en formato YYYY-MM-DD'
+        help='Start date in YYYY-MM-DD format'
     )
     
     parser.add_argument(
         '--end-date',
         type=parse_date,
-        help='Fecha final en formato YYYY-MM-DD'
+        help='End date in YYYY-MM-DD format'
     )
     
     parser.add_argument(
         '--output-dir',
         default='slack_exports',
-        help='Directorio donde se guardarán los archivos'
+        help='Directory where files will be saved'
     )
     
     parser.add_argument(
         '--token',
         default=os.getenv("SLACK_TOKEN"),
-        help='Token de Slack (también puede usar la variable de entorno SLACK_TOKEN)'
+        help='Slack token (can also use SLACK_TOKEN environment variable)'
     )
 
     return parser.parse_args()
