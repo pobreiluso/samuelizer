@@ -50,9 +50,46 @@ class SlackDownloader:
         self.config = config
         self.base_url = "https://slack.com/api"
         self.headers = {"Authorization": f"Bearer {self.config.token}"}
+        self.users_cache = {}
         
         if not os.path.exists(config.output_dir):
             os.makedirs(config.output_dir)
+
+    def get_user_info(self, user_id: str) -> str:
+        """Obtiene el nombre de usuario de Slack dado un ID"""
+        if user_id in self.users_cache:
+            return self.users_cache[user_id]
+            
+        try:
+            url = f"{self.base_url}/users.info"
+            params = {"user": user_id}
+            
+            response = requests.get(url, headers=self.headers, params=params)
+            response.raise_for_status()
+            data = response.json()
+            
+            if not data.get("ok"):
+                logger.warning(f"No se pudo obtener info del usuario {user_id}")
+                return user_id
+                
+            user = data["user"]
+            display_name = user.get("profile", {}).get("display_name") or user.get("real_name") or user_id
+            self.users_cache[user_id] = display_name
+            return display_name
+            
+        except Exception as e:
+            logger.warning(f"Error obteniendo info del usuario {user_id}: {e}")
+            return user_id
+
+    def replace_user_mentions(self, text: str) -> str:
+        """Reemplaza las menciones de usuario en el texto"""
+        import re
+        
+        def replace_mention(match):
+            user_id = match.group(1)
+            return f"@{self.get_user_info(user_id)}"
+            
+        return re.sub(r'<@([A-Z0-9]+)>', replace_mention, text)
 
     def get_channel_info(self) -> Dict:
         """
@@ -100,6 +137,12 @@ class SlackDownloader:
             "channel": self.config.channel_id,
             "limit": self.config.batch_size,
         }
+        
+        # Procesar menciones de usuario en los mensajes
+        def process_message(message):
+            if "text" in message:
+                message["text"] = self.replace_user_mentions(message["text"])
+            return message
 
         # Añadir filtros de fecha si están especificados
         if self.config.start_date:
@@ -121,7 +164,8 @@ class SlackDownloader:
                     raise Exception(f"Error en la API de Slack: {data.get('error')}")
 
                 messages = data["messages"]
-                all_messages.extend(messages)
+                processed_messages = [process_message(msg) for msg in messages]
+                all_messages.extend(processed_messages)
                 logging.info(f"Descargados {len(messages)} mensajes")
 
                 if "next_cursor" in data.get("response_metadata", {}):
