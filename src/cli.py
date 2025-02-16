@@ -312,7 +312,8 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
 @click.option('--output-dir', default='recordings', help='Directory to save recordings')
 @click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 @click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
-def listen_command(duration, output_dir, api_key, output):
+@click.option('--template', default='summary', help='Analysis template to use (summary, executive, quick)')
+def listen_command(duration, output_dir, api_key, output, template):
     """
     Listen and transcribe system audio in real-time.
     
@@ -348,7 +349,8 @@ def listen_command(duration, output_dir, api_key, output):
                       api_key=api_key,
                       drive_url=None,
                       optimize='32k',
-                      output=output)
+                      output=output,
+                      template=template)
         else:
             click.echo(f"Audio saved to: {audio_file}")
             
