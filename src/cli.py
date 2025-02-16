@@ -357,7 +357,7 @@ def listen_command(duration, output_dir, api_key, output, template):
 @cli.command()
 def version():
     """Displays the CLI agent version."""
-    click.echo("samuelizer version 1.0.0")
+    click.echo("samuelizer version 1.1.0")
 
 if __name__ == '__main__':
     try:
