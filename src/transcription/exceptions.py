@@ -1,44 +1,44 @@
 class MeetingMinutesError(Exception):
     """
-    Excepción base para el módulo de actas de reuniones.
+    Base exception for the meeting minutes module.
     
-    Esta clase sirve como base para todas las excepciones específicas
-    del módulo de procesamiento de reuniones.
+    This class serves as the base for all specific exceptions
+    in the meeting processing module.
     """
     pass
 
 class TranscriptionError(MeetingMinutesError):
     """
-    Error durante el proceso de transcripción.
+    Error during the transcription process.
     
-    Se lanza cuando hay problemas al convertir audio a texto,
-    ya sea por problemas con la API de OpenAI o el archivo de audio.
+    Raised when there are problems converting audio to text,
+    either due to issues with the OpenAI API or the audio file.
     """
     pass
 
 class AnalysisError(MeetingMinutesError):
     """
-    Error durante el análisis del contenido.
+    Error during content analysis.
     
-    Se lanza cuando hay problemas al procesar o analizar el texto
-    transcrito, como errores en la generación de resúmenes o análisis.
+    Raised when there are problems processing or analyzing the
+    transcribed text, such as errors in summary generation or analysis.
     """
     pass
 
 class DownloadError(MeetingMinutesError):
     """
-    Error durante la descarga de video.
+    Error during video download.
     
-    Se lanza cuando hay problemas al descargar videos desde
-    fuentes externas como Google Drive o URLs.
+    Raised when there are problems downloading videos from
+    external sources like Google Drive or URLs.
     """
     pass
 
 class AudioExtractionError(MeetingMinutesError):
     """
-    Error durante la extracción de audio.
+    Error during audio extraction.
     
-    Se lanza cuando hay problemas al extraer el audio de un
-    archivo de video o al procesar archivos de audio.
+    Raised when there are problems extracting audio from a
+    video file or processing audio files.
     """
     pass
