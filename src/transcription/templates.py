@@ -184,43 +184,85 @@ class PromptTemplates:
             }
         },
 
-        "slack": {
-            "system": "You are an AI specialized in creating ultra-concise, actionable summaries of Slack conversations.",
+        "slack_brief": {
+            "system": "You are an AI that creates ultra-concise Slack conversation summaries focusing only on decisions and actions.",
             "template": """
-            Analiza la siguiente conversación de Slack y genera un resumen ultra conciso:
+            Analiza esta conversación de Slack y genera un resumen ultra conciso:
 
-            📌 **Contexto General** (1-2 frases)
-            • Propósito/tema principal del canal
-            • Período analizado
+            📍 **TL;DR**
+            • La esencia en una frase
 
-            🎯 **Temas Principales** (máx. 3)
-            • Título del tema
-            • Estado: [✅ Resuelto | ⏳ Pendiente]
-            • 1-2 frases por tema
+            🎯 **Decisiones** (máx 3)
+            • Solo decisiones finales tomadas
+            • Sin contexto ni discusiones
 
-            ⚡️ **Acciones Pendientes** (si hay)
-            • [ ] Tarea (@responsable, fecha)
-            • Solo tareas concretas y asignadas
+            ⚡️ **Pendiente**
+            • [ ] Solo tareas NO completadas
+            • [ ] Con @responsable si existe
 
-            💫 **Para Nuevos**
-            • A quién contactar
-            • Próximos pasos importantes
-
-            Instrucciones:
-            - Sé extremadamente conciso
-            - Usa @menciones y #canales
-            - Prioriza decisiones y acciones
-            - Omite detalles no esenciales
+            Reglas:
+            - Máxima brevedad
+            - Solo info CRÍTICA
+            - Ignorar discusiones/debates
+            - Omitir todo lo que no sea decisión/acción
+            - Usar emojis estratégicamente
 
             Texto a analizar:
             {text}
             """,
             "parameters": {
-                "max_length": 400,
-                "style": "ultra_concise",
-                "format": "minimal",
+                "max_length": 250,
+                "style": "minimal",
+                "format": "bullet",
+                "preserve_mentions": True
+            }
+        },
+
+        "slack_detailed": {
+            "system": "You are an AI that creates structured summaries of Slack conversations with focus on context and outcomes.",
+            "template": """
+            Analiza esta conversación de Slack y genera un resumen estructurado:
+
+            📌 **Contexto**
+            • Tema central
+            • Participantes clave
+
+            💡 **Discusiones Principales**
+            • Tema → Conclusión
+            • Solo debates relevantes
+            • Incluir puntos de desacuerdo importantes
+
+            ✅ **Decisiones Finales**
+            • Qué se decidió
+            • Por qué se decidió
+            • Impacto esperado
+
+            📋 **Plan de Acción**
+            • [ ] Tareas pendientes (@responsable)
+            • [ ] Próximos pasos
+            • [ ] Fechas clave
+
+            ⚠️ **Puntos de Atención**
+            • Bloqueantes/Riesgos
+            • Dependencias externas
+            • Recursos necesarios
+
+            Reglas:
+            - Mantener contexto relevante
+            - Destacar desacuerdos importantes
+            - Enfatizar decisiones y razones
+            - Incluir @menciones y #canales
+            - Usar emojis para mejorar lectura
+
+            Texto a analizar:
+            {text}
+            """,
+            "parameters": {
+                "max_length": 800,
+                "style": "structured",
+                "format": "detailed",
                 "preserve_mentions": True,
-                "include_emojis": True
+                "include_context": True
             }
         }
     }
