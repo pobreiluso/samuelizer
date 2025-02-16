@@ -323,7 +323,13 @@ def listen_command(duration, output_dir, api_key, output):
         
         if api_key:
             click.echo("Transcribing recorded audio...")
-            transcribe_media(audio_file, api_key, None, '32k', output)
+            ctx = click.get_current_context()
+            ctx.invoke(transcribe_media, 
+                      file_path=audio_file,
+                      api_key=api_key,
+                      drive_url=None,
+                      optimize='32k',
+                      output=output)
         else:
             click.echo(f"Audio saved to: {audio_file}")
             
