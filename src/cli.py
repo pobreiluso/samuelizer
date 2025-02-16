@@ -273,13 +273,9 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
         
         analyzer = MeetingAnalyzer(transcription_text)
         
-        if template == 'all':
-            meeting_info = {
-                'abstract_summary': analyzer.summarize(),
-                'key_points': analyzer.extract_key_points(),
-                'action_items': analyzer.extract_action_items(),
-                'sentiment': analyzer.analyze_sentiment()
-            }
+        if template == 'all' or template == 'default':
+            result = analyzer.analyze('default')
+            meeting_info = {'default': result}
         else:
             result = analyzer.analyze(template)
             meeting_info = {template: result}
