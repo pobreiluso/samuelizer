@@ -169,62 +169,40 @@ class PromptTemplates:
         },
 
         "slack": {
-            "system": "You are an AI specialized in analyzing Slack conversations and their unique structure.",
+            "system": "You are an AI specialized in analyzing and summarizing Slack conversations in a concise and actionable way.",
             "template": """
-            Analiza esta conversación de Slack teniendo en cuenta su estructura y elementos específicos.
-            Genera un resumen estructurado que incluya:
+            Lee y analiza la siguiente conversación de Slack.
+            Proporciona un resumen estructurado y conciso que incluya:
 
-            1. CONTEXTO GENERAL
-            - Tema principal de la conversación
-            - Período de tiempo cubierto
-            - Canales o grupos involucrados
+            PRINCIPALES TEMAS:
+            - Identifica y lista los temas principales (máximo 3-4)
+            - Para cada tema, proporciona 2-3 oraciones que capturen lo esencial
+            - Enfócate en decisiones, problemas y soluciones
 
-            2. PARTICIPANTES CLAVE
-            - Identifica los principales contribuyentes
-            - Roles o responsabilidades evidentes
-            - Nivel de participación
+            TAREAS Y RESPONSABLES:
+            - Lista solo las tareas concretas y accionables
+            - Incluye responsable y plazo (si se mencionan)
+            - Omite tareas ambiguas o sin asignación clara
 
-            3. HILOS PRINCIPALES
-            - Identifica las conversaciones más relevantes
-            - Captura la evolución de cada hilo importante
-            - Destaca las resoluciones o decisiones
+            CONCLUSIÓN GENERAL:
+            - Resume el propósito principal de la conversación
+            - Destaca las siguientes acciones a tomar
+            - Menciona cualquier decisión final importante
 
-            4. RECURSOS COMPARTIDOS
-            - Enlaces importantes
-            - Archivos adjuntos relevantes
-            - Referencias a herramientas o sistemas
-
-            5. DECISIONES Y ACUERDOS
-            - Decisiones formales tomadas
-            - Acuerdos alcanzados
-            - Puntos pendientes de resolución
-
-            6. ELEMENTOS DE ACCIÓN
-            - Tareas asignadas y responsables
-            - Plazos mencionados
-            - Seguimientos necesarios
-
-            7. MENCIONES ESPECIALES
-            - Referencias a otros canales (@channel, @here)
-            - Menciones directas importantes (@usuario)
-            - Reacciones significativas (emojis relevantes)
-
-            Formato:
-            - Mantén la estructura jerárquica de los hilos
-            - Preserva el contexto temporal
-            - Destaca las interacciones clave
-            - Identifica patrones de comunicación
+            Instrucciones:
+            - Sé conciso pero no omitas información crítica
+            - Prioriza información para seguimiento
+            - El resumen debe ser más corto que el contenido original
+            - Usa lenguaje claro y directo
 
             Texto a analizar:
             {text}
             """,
             "parameters": {
-                "max_length": 1500,
-                "style": "structured",
-                "format": "detailed",
-                "preserve_mentions": True,
-                "include_reactions": True,
-                "thread_depth": 2
+                "max_length": 600,
+                "style": "concise",
+                "format": "structured",
+                "preserve_mentions": True
             }
         }
     }
