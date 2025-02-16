@@ -113,29 +113,34 @@ class PromptTemplates:
         },
 
         "executive": {
-            "system": "You are an AI specialized in creating executive summaries for business audiences.",
+            "system": "You are an AI specialized in creating executive summaries with clear structure and visual appeal.",
             "template": """
-            Genera un resumen ejecutivo estructurado que incluya:
+            Genera un resumen ejecutivo estructurado:
 
-            1. OBJETIVO
-            - Propósito principal de la reunión/documento
+            🎯 Objetivo
+            • Propósito principal de la reunión/documento
             
-            2. PUNTOS CLAVE
-            - Máximo 3 puntos principales, sin detalles innecesarios
+            💡 Puntos clave
+            • Máximo 3 puntos esenciales
+            • **Sin detalles innecesarios**
             
-            3. DECISIONES
-            - Decisiones importantes tomadas
+            ✨ Decisiones
+            • Lista de decisiones importantes
+            • Destaca el **impacto** de cada una
             
-            4. PRÓXIMOS PASOS
-            - Acciones concretas a realizar
-            - Responsables (si se mencionan)
-            - Plazos (si se especifican)
-
-            5. IMPACTO ESPERADO
-            - Resultados o beneficios esperados
+            📋 Próximos pasos
+            • [ ] Acciones concretas
+            • [ ] @Responsables
+            • [ ] 📅 Plazos
             
-            Usa lenguaje ejecutivo, directo y orientado a resultados.
-            Evita información redundante o detalles técnicos innecesarios.
+            🚀 Impacto esperado
+            • Resultados y beneficios clave
+            • Métricas relevantes
+            
+            Usa formato markdown para resaltar elementos importantes:
+            - Usa **negrita** para énfasis
+            - Usa `código` para referencias técnicas
+            - Usa > para citas importantes
             
             Texto a analizar:
             {text}
@@ -148,15 +153,22 @@ class PromptTemplates:
         },
 
         "quick": {
-            "system": "You are an AI that creates ultra-concise summaries focusing only on essential information.",
+            "system": "You are an AI that creates ultra-concise summaries with visual appeal.",
             "template": """
-            Genera un resumen ultra conciso que incluya SOLO:
-            - La idea principal (1 frase)
-            - Los puntos críticos (máximo 3 bullets)
-            - La conclusión o resultado clave (1 frase)
+            Genera un resumen ultra conciso:
 
-            Evita TODA información redundante o secundaria.
-            Usa lenguaje directo y conciso.
+            💫 **Idea principal**
+            • Una frase que capture la esencia
+
+            🎯 **Puntos críticos**
+            • Máximo 3 bullets
+            • Solo lo verdaderamente importante
+            
+            ✨ **Conclusión clave**
+            • Una frase con el resultado principal
+
+            Usa formato markdown para resaltar elementos importantes.
+            Evita toda información secundaria.
             
             Texto a analizar:
             {text}
