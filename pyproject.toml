@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "samuelizer"
-version = "1.0.0"
+version = "1.1.0"
 description = "AI Agent for summarizing Slack Channels, Threads, Meets..."
 authors = ["ajerez <ajerez@freepik.com>"]
 readme = "README.md"
