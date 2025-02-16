@@ -8,12 +8,12 @@ class PromptTemplates:
         "summary": {
             "system": "You are an AI summarize into a concise abstract paragraph.",
             "template": """
-            Analiza el siguiente texto y genera un resumen conciso que capture:
-            - El contexto y propósito principal
-            - Los puntos más importantes discutidos
-            - Las conclusiones o resultados clave
+            Analyze the following text and generate a concise summary that captures:
+            - The context and main purpose
+            - The most important points discussed
+            - Key conclusions or results
             
-            Texto a analizar:
+            Text to analyze:
             {text}
             """,
             "parameters": {
@@ -25,13 +25,13 @@ class PromptTemplates:
         "key_points": {
             "system": "You are an AI identify and list the main points.",
             "template": """
-            Identifica y lista los puntos principales del siguiente texto.
-            Para cada punto:
-            - Debe ser una idea completa y autocontenida
-            - Debe ser relevante para el tema principal
-            - Debe estar expresado de forma clara y concisa
+            Identify and list the main points from the following text.
+            For each point:
+            - Must be a complete and self-contained idea
+            - Must be relevant to the main topic
+            - Must be expressed clearly and concisely
 
-            Texto a analizar:
+            Text to analyze:
             {text}
             """,
             "parameters": {

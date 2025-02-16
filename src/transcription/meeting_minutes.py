@@ -35,37 +35,37 @@ class AudioTranscriptionService:
     def transcribe(self, audio_file_path):
         try:
             file_size = os.path.getsize(audio_file_path) / (1024 * 1024)  # Tamaño en MB
-            logger.info(f"Procesando archivo de audio de {file_size:.2f} MB")
+            logger.info(f"Processing audio file of {file_size:.2f} MB")
             
-            with tqdm(total=100, desc="Transcribiendo audio", unit="%", colour='green') as pbar:
-                # Actualizar progreso: Preparación
+            with tqdm(total=100, desc="Transcribing audio", unit="%", colour='green') as pbar:
+                # Update progress: Preparation
                 pbar.update(10)
-                logger.info("Preparando archivo para transcripción...")
+                logger.info("Preparing file for transcription...")
                 
-                # Actualizar progreso: Abriendo archivo
+                # Update progress: Opening file
                 with open(audio_file_path, 'rb') as audio_file:
                     pbar.update(20)
-                    logger.info("Enviando archivo a OpenAI...")
+                    logger.info("Sending file to OpenAI...")
                     
-                    # Actualizar progreso: Enviando a OpenAI
+                    # Update progress: Sending to OpenAI
                     pbar.update(20)
                     
-                    # Realizar la transcripción
+                    # Perform transcription
                     transcription = openai.audio.transcriptions.create(
                         model=self.model,
                         file=audio_file,
                         response_format="text"
                     )
                     
-                    # Actualizar progreso: Transcripción completada
+                    # Update progress: Transcription completed
                     pbar.update(40)
-                    logger.info("Transcripción completada exitosamente")
+                    logger.info("Transcription completed successfully")
                     
-                    # Mostrar información sobre el resultado
+                    # Show result information
                     if transcription:
                         char_count = len(transcription)
                         word_count = len(transcription.split())
-                        logger.info(f"Transcripción generada: {word_count} palabras, {char_count} caracteres")
+                        logger.info(f"Transcription generated: {word_count} words, {char_count} characters")
                     
             return transcription
         except openai.AuthenticationError as e:
@@ -87,7 +87,20 @@ class MeetingAnalyzer:
         self.prompt_templates = PromptTemplates()
 
     def analyze(self, template_name: str, **kwargs) -> str:
-        """Analiza el texto usando un template específico"""
+        """
+        Analyze text using a specific template.
+        
+        Args:
+            template_name (str): Name of the template to use
+            **kwargs: Additional parameters to customize the template
+            
+        Returns:
+            str: Analysis result based on the template
+            
+        Raises:
+            AnalysisError: If analysis fails
+            ValueError: If template doesn't exist
+        """
         template = self.prompt_templates.get_template(template_name, **kwargs)
         
         messages = [
