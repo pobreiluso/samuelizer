@@ -192,7 +192,7 @@ class PromptTemplates:
             📍 **TL;DR**
             • La esencia en una frase
 
-            🎯 **Decisiones** (máx 3)
+            🎯 **Decisiones**
             • Solo decisiones finales tomadas
             • Sin contexto ni discusiones
 
