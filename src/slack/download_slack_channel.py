@@ -5,11 +5,27 @@ import click
 from datetime import datetime, timezone
 
 class SlackAPIError(Exception):
-    """Raised when Slack API returns an error response"""
+    """
+    Custom exception for Slack API errors.
+    
+    Raised when:
+    - API returns an error response
+    - Authentication fails
+    - Rate limits are exceeded
+    - Invalid parameters are provided
+    """
     pass
 
 class RequestError(Exception):
-    """Raised when there is an error making HTTP requests"""
+    """
+    Custom exception for HTTP request errors.
+    
+    Raised when:
+    - Network connection fails
+    - DNS resolution fails
+    - Timeout occurs
+    - SSL/TLS errors occur
+    """
     pass
 import time
 from typing import Dict, List, Optional
@@ -36,7 +52,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SlackConfig:
-    """Configuration for Slack API interactions"""
+    """
+    Configuration dataclass for Slack API interactions.
+    
+    Attributes:
+        token (str): Slack API authentication token
+        channel_id (str): ID of the Slack channel to process
+        start_date (Optional[datetime]): Start date for message filtering
+        end_date (Optional[datetime]): End date for message filtering
+        output_dir (str): Directory where exported files will be saved
+        rate_limit_delay (float): Delay between API requests to avoid rate limiting
+        batch_size (int): Number of messages to fetch per API request
+    """
     token: str
     channel_id: str
     start_date: Optional[datetime] = None
@@ -46,7 +73,29 @@ class SlackConfig:
     batch_size: int = Config.SLACK_BATCH_SIZE
 
 class SlackDownloader:
+    """
+    Main class for downloading and processing Slack messages.
+    
+    This class handles:
+    - Authentication with Slack API
+    - Message downloading with pagination
+    - User information caching
+    - Message processing and formatting
+    - Export to JSON files
+    """
+    
     def __init__(self, config: SlackConfig):
+        """
+        Initialize the downloader with configuration.
+        
+        Args:
+            config (SlackConfig): Configuration object with API credentials and settings
+            
+        Creates:
+            - Output directory if it doesn't exist
+            - Authorization headers for API requests
+            - Empty user information cache
+        """
         self.config = config
         self.base_url = "https://slack.com/api"
         self.headers = {"Authorization": f"Bearer {self.config.token}"}
@@ -220,13 +269,38 @@ class SlackDownloader:
         return filename
 
 def parse_date(date_str: str) -> datetime:
-    """Convierte una cadena de fecha en formato YYYY-MM-DD a datetime"""
+    """
+    Convert a date string to datetime object.
+    
+    Args:
+        date_str (str): Date in YYYY-MM-DD format
+        
+    Returns:
+        datetime: Parsed date with UTC timezone
+        
+    Raises:
+        ArgumentTypeError: If date format is invalid
+    """
     try:
         return datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
     except ValueError as e:
         raise argparse.ArgumentTypeError(f"Formato de fecha inválido: {str(e)}")
 
 def parse_arguments():
+    """
+    Parse command line arguments for the script.
+    
+    Returns:
+        argparse.Namespace: Parsed command line arguments containing:
+            - channel_id: Slack channel identifier
+            - start_date: Optional start date for filtering
+            - end_date: Optional end date for filtering
+            - output_dir: Directory for saving exports
+            - token: Slack API token
+            
+    Note:
+        The token can also be provided via SLACK_TOKEN environment variable
+    """
     parser = argparse.ArgumentParser(description='Download messages from a Slack channel')
     
     parser.add_argument(
@@ -261,6 +335,21 @@ def parse_arguments():
     return parser.parse_args()
 
 def main():
+    """
+    Main entry point for the Slack message downloader.
+    
+    This function:
+    1. Parses command line arguments
+    2. Prompts for Slack token if not provided
+    3. Creates SlackDownloader instance
+    4. Downloads channel information
+    5. Fetches messages with optional date filtering
+    6. Saves messages to JSON file
+    
+    Exits:
+        0: Successful execution
+        1: Error occurred during execution
+    """
     args = parse_arguments()
     
     if not args.token:
