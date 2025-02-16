@@ -166,6 +166,66 @@ class PromptTemplates:
                 "style": "concise",
                 "format": "minimal"
             }
+        },
+
+        "slack": {
+            "system": "You are an AI specialized in analyzing Slack conversations and their unique structure.",
+            "template": """
+            Analiza esta conversación de Slack teniendo en cuenta su estructura y elementos específicos.
+            Genera un resumen estructurado que incluya:
+
+            1. CONTEXTO GENERAL
+            - Tema principal de la conversación
+            - Período de tiempo cubierto
+            - Canales o grupos involucrados
+
+            2. PARTICIPANTES CLAVE
+            - Identifica los principales contribuyentes
+            - Roles o responsabilidades evidentes
+            - Nivel de participación
+
+            3. HILOS PRINCIPALES
+            - Identifica las conversaciones más relevantes
+            - Captura la evolución de cada hilo importante
+            - Destaca las resoluciones o decisiones
+
+            4. RECURSOS COMPARTIDOS
+            - Enlaces importantes
+            - Archivos adjuntos relevantes
+            - Referencias a herramientas o sistemas
+
+            5. DECISIONES Y ACUERDOS
+            - Decisiones formales tomadas
+            - Acuerdos alcanzados
+            - Puntos pendientes de resolución
+
+            6. ELEMENTOS DE ACCIÓN
+            - Tareas asignadas y responsables
+            - Plazos mencionados
+            - Seguimientos necesarios
+
+            7. MENCIONES ESPECIALES
+            - Referencias a otros canales (@channel, @here)
+            - Menciones directas importantes (@usuario)
+            - Reacciones significativas (emojis relevantes)
+
+            Formato:
+            - Mantén la estructura jerárquica de los hilos
+            - Preserva el contexto temporal
+            - Destaca las interacciones clave
+            - Identifica patrones de comunicación
+
+            Texto a analizar:
+            {text}
+            """,
+            "parameters": {
+                "max_length": 1500,
+                "style": "structured",
+                "format": "detailed",
+                "preserve_mentions": True,
+                "include_reactions": True,
+                "thread_depth": 2
+            }
         }
     }
 
