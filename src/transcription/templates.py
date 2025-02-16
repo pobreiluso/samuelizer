@@ -185,40 +185,42 @@ class PromptTemplates:
         },
 
         "slack": {
-            "system": "You are an AI specialized in analyzing and summarizing Slack conversations in a concise and actionable way.",
+            "system": "You are an AI specialized in creating ultra-concise, actionable summaries of Slack conversations.",
             "template": """
-            Lee y analiza la siguiente conversación de Slack.
-            Proporciona un resumen estructurado y conciso que incluya:
+            Analiza la siguiente conversación de Slack y genera un resumen ultra conciso:
 
-            PRINCIPALES TEMAS:
-            - Identifica y lista los temas principales (máximo 3-4)
-            - Para cada tema, proporciona 2-3 oraciones que capturen lo esencial
-            - Enfócate en decisiones, problemas y soluciones
+            📌 **Contexto General** (1-2 frases)
+            • Propósito/tema principal del canal
+            • Período analizado
 
-            TAREAS Y RESPONSABLES:
-            - Lista solo las tareas concretas y accionables
-            - Incluye responsable y plazo (si se mencionan)
-            - Omite tareas ambiguas o sin asignación clara
+            🎯 **Temas Principales** (máx. 3)
+            • Título del tema
+            • Estado: [✅ Resuelto | ⏳ Pendiente]
+            • 1-2 frases por tema
 
-            CONCLUSIÓN GENERAL:
-            - Resume el propósito principal de la conversación
-            - Destaca las siguientes acciones a tomar
-            - Menciona cualquier decisión final importante
+            ⚡️ **Acciones Pendientes** (si hay)
+            • [ ] Tarea (@responsable, fecha)
+            • Solo tareas concretas y asignadas
+
+            💫 **Para Nuevos**
+            • A quién contactar
+            • Próximos pasos importantes
 
             Instrucciones:
-            - Sé conciso pero no omitas información crítica
-            - Prioriza información para seguimiento
-            - El resumen debe ser más corto que el contenido original
-            - Usa lenguaje claro y directo
+            - Sé extremadamente conciso
+            - Usa @menciones y #canales
+            - Prioriza decisiones y acciones
+            - Omite detalles no esenciales
 
             Texto a analizar:
             {text}
             """,
             "parameters": {
-                "max_length": 600,
-                "style": "concise",
-                "format": "structured",
-                "preserve_mentions": True
+                "max_length": 400,
+                "style": "ultra_concise",
+                "format": "minimal",
+                "preserve_mentions": True,
+                "include_emojis": True
             }
         }
     }
