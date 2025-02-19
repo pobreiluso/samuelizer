@@ -264,6 +264,64 @@ class PromptTemplates:
                 "preserve_mentions": True,
                 "include_context": True
             }
+        },
+
+        "one_to_one": {
+            "system": "You are an AI specialized in analyzing and summarizing 1:1 meetings with Tech Leads.",
+            "template": """
+            Analyze this 1:1 meeting and provide a structured summary following this format:
+
+            🚦 **Daily Challenges & Blockers**
+            • Technical and process blockers
+            • Time management issues
+            • Team coordination challenges
+
+            🎯 **Team Performance**
+            • Current team status
+            • Key achievements
+            • Areas needing attention
+
+            📋 **Resource Needs**
+            • Tools and resources required
+            • Training needs
+            • Support requirements
+
+            💡 **Improvement Areas**
+            • Process improvements
+            • Technical improvements
+            • Team dynamics improvements
+
+            👥 **Guild & Career Development**
+            • Guild participation and impact
+            • Training progress and plans
+            • Career path discussion
+            • Knowledge sharing initiatives
+
+            👤 **Personal Development**
+            • Salary expectations
+            • Career expectations
+            • Work-life balance
+            • Job satisfaction
+
+            ⚡️ **Action Items**
+            • [ ] Concrete next steps
+            • [ ] Assigned responsibilities
+            • [ ] Follow-up items
+
+            Use markdown format to highlight important elements:
+            - Use **bold** for emphasis
+            - Use > for important quotes
+            - Use bullet points for better readability
+
+            Text to analyze:
+            {text}
+            """,
+            "parameters": {
+                "max_length": 800,
+                "style": "structured",
+                "format": "detailed",
+                "include_action_items": True
+            }
         }
     }
 
