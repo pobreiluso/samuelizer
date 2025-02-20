@@ -368,6 +368,51 @@ class PromptTemplates:
                 "format": "detailed",
                 "include_action_items": True
             }
+        },
+
+        "auto": {
+            "system": """You are an AI expert in content analysis and template selection.
+            Your task is to analyze the given text and determine the most appropriate template
+            for summarizing it based on its content, structure, and context.""",
+            "template": """
+            Analyze this text and determine the most appropriate template to use for summarization.
+            Consider these aspects:
+
+            1. Content Type:
+            - Is it a meeting? What kind? (1:1, team sync, presentation)
+            - Is it a Slack conversation?
+            - Is it a general document or transcript?
+
+            2. Content Structure:
+            - How formal/informal is it?
+            - Is it structured or free-flowing?
+            - Are there clear sections or topics?
+
+            3. Content Elements:
+            - Are there action items?
+            - Are there decisions made?
+            - Is there technical discussion?
+            - Is there personal/career discussion?
+
+            Available templates:
+            - one_to_one: For 1:1 meetings with focus on personal/career development
+            - weekly_sync: For team status updates and planning
+            - executive: For formal meetings with clear structure
+            - quick: For brief, informal discussions
+            - slack_brief: For Slack conversations needing minimal context
+            - slack_detailed: For complex Slack discussions
+            - summary: For general content requiring standard summary
+            - action_items: For content focused on tasks and actions
+            - sentiment: For content where tone and reactions matter
+
+            Text to analyze:
+            {text}
+
+            Respond with:
+            1. The recommended template name
+            2. A brief explanation of why this template is most appropriate
+            3. Any specific considerations for using this template
+            """
         }
     }
 

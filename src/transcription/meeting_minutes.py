@@ -96,12 +96,12 @@ class MeetingAnalyzer:
             return "\n\n".join(chunks)
         return text
 
-    def analyze(self, template_name: str, **kwargs) -> str:
+    def analyze(self, template_name: str = "auto", **kwargs) -> str:
         """
-        Analyze text using a specific template.
+        Analyze text using a specific template or auto-select the best template.
         
         Args:
-            template_name (str): Name of the template to use
+            template_name (str): Name of the template to use, defaults to "auto"
             **kwargs: Additional parameters to customize the template
             
         Returns:
@@ -111,8 +111,35 @@ class MeetingAnalyzer:
             AnalysisError: If analysis fails
             ValueError: If template doesn't exist
         """
-        template = self.prompt_templates.get_template(template_name, **kwargs)
-        
+        if template_name == "auto":
+            # First, analyze the content to determine the best template
+            template = self.prompt_templates.get_template("auto")
+            try:
+                response = openai.chat.completions.create(
+                    model="gpt-4-1106-preview",
+                    temperature=0,
+                    messages=[
+                        {"role": "system", "content": template["system"]},
+                        {"role": "user", "content": template["template"].format(text=self.transcription)}
+                    ]
+                )
+                
+                # Parse the response to get the recommended template
+                analysis = response.choices[0].message.content
+                recommended_template = analysis.split('\n')[0].strip().lower()
+                
+                # Log the template selection reasoning
+                logger.info(f"Auto-selected template: {recommended_template}")
+                logger.info(f"Selection reasoning: {analysis}")
+                
+                # Get and use the recommended template
+                template = self.prompt_templates.get_template(recommended_template, **kwargs)
+            except Exception as e:
+                logger.warning(f"Error in auto-template selection: {e}. Falling back to 'summary' template.")
+                template = self.prompt_templates.get_template("summary", **kwargs)
+        else:
+            template = self.prompt_templates.get_template(template_name, **kwargs)
+            
         messages = [
             {"role": "system", "content": template["system"]},
             {"role": "user", "content": template["template"].format(text=self.transcription)}
