@@ -322,6 +322,52 @@ class PromptTemplates:
                 "format": "detailed",
                 "include_action_items": True
             }
+        },
+
+        "weekly_sync": {
+            "system": "You are an AI specialized in analyzing and summarizing weekly team sync meetings.",
+            "template": """
+            Analyze this weekly sync meeting and provide a structured summary following this format:
+
+            📅 **Last Week's Achievements**
+            • List completed tasks and milestones
+            • Highlight significant progress
+            • Note any resolved issues
+            • Include metrics when available
+
+            📋 **This Week's Plan**
+            • Outline planned tasks and goals
+            • Prioritize key deliverables
+            • Mention ongoing projects
+            • Include deadlines if specified
+
+            🚧 **Blockers & Risks**
+            • Current blockers
+            • Potential risks
+            • Dependencies
+            • Resource constraints
+
+            ⚡️ **Action Items**
+            • [ ] Concrete tasks with owners
+            • [ ] Follow-up items
+            • [ ] Decisions that need to be made
+            • [ ] Dependencies to be resolved
+
+            Use markdown format to highlight important elements:
+            - Use **bold** for emphasis
+            - Use > for important quotes
+            - Use bullet points for better readability
+            - Include @mentions for ownership
+
+            Text to analyze:
+            {text}
+            """,
+            "parameters": {
+                "max_length": 800,
+                "style": "structured",
+                "format": "detailed",
+                "include_action_items": True
+            }
         }
     }
 
