@@ -126,7 +126,10 @@ class MeetingAnalyzer:
                 
                 # Parse the response to get the recommended template
                 analysis = response.choices[0].message.content
-                recommended_template = analysis.split('\n')[0].strip().lower()
+                # Extract template name from the first line, removing any markdown or extra text
+                first_line = analysis.split('\n')[0].strip()
+                recommended_template = first_line.split(':')[-1].strip().lower()
+                recommended_template = recommended_template.replace('**', '').replace('*', '')
                 
                 # Log the template selection reasoning
                 logger.info(f"Auto-selected template: {recommended_template}")
