@@ -414,9 +414,13 @@ class PromptTemplates:
             {text}
 
             Respond with:
-            1. The recommended template name
-            2. A brief explanation of why this template is most appropriate
-            3. Any specific considerations for using this template
+            template: [template_name]
+            
+            explanation:
+            [Brief explanation of why this template is most appropriate]
+            
+            considerations:
+            [Specific considerations for using this template]
             """
         }
     }
