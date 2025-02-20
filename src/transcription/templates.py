@@ -374,6 +374,11 @@ class PromptTemplates:
             "system": """You are an AI expert in content analysis and template selection.
             Your task is to analyze the given text and determine the most appropriate template
             for summarizing it based on its content, structure, and context.""",
+            "parameters": {
+                "max_length": 500,
+                "style": "auto",
+                "format": "structured"
+            },
             "template": """
             Analyze this text and determine the most appropriate template to use for summarization.
             Consider these aspects:
