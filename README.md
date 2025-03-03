@@ -1,65 +1,65 @@
 # Samuelizer
 
-**Samuelizer** es una herramienta de inteligencia artificial diseñada para resumir de manera automática conversaciones de Slack, reuniones, transcripciones de audio/video y otros contenidos relacionados. Aprovecha tecnologías de vanguardia (como los modelos de OpenAI) para transformar larga información en resúmenes claros, concisos y visualmente atractivos, facilitando la toma de decisiones y el análisis rápido de la información.
+**Samuelizer** is an AI-powered tool designed to automatically summarize Slack conversations, meetings, audio/video transcriptions, and other related content. It leverages cutting-edge technologies (such as OpenAI's models) to transform large amounts of information into clear, concise, and visually appealing summaries—facilitating decision-making and rapid analysis.
 
 ---
 
-## Tabla de Contenidos
+## Table of Contents
 
-- [Características Principales](#caracter%C3%ADsticas-principales)
-- [Instalación y Requerimientos](#instalaci%C3%B3n-y-requerimientos)
-- [Uso y Ejemplos](#uso-y-ejemplos)
-- [Estructura del Proyecto](#estructura-del-proyecto)
-- [Contribuciones](#contribuciones)
-- [Mantenimiento y Roadmap](#mantenimiento-y-roadmap)
-- [Licencia](#licencia)
-- [Autores y Contacto](#autores-y-contacto)
-
----
-
-## Características Principales
-
-- **Análisis de Slack:**  
-  - Descarga y procesado de mensajes de Slack (canal o hilo).  
-  - Reemplazo inteligente de menciones de usuario para una mejor legibilidad.  
-  - Filtros por rango de fechas.
-
-- **Transcripción de Audio/Video:**  
-  - Extracción y optimización de audio desde múltiples formatos (MP4, AVI, MKV, MP3, WAV, etc.).  
-  - Transcripción automática mediante el modelo *Whisper* de OpenAI.
-
-- **Generación de Resúmenes:**  
-  - Resumen ejecutivo, análisis de sentimientos, puntos clave, y acciones a seguir.
-  - **Selección Automática de Plantillas:** La IA analiza el contenido y selecciona automáticamente la plantilla óptima según el contexto.
-  - Personalización de plantillas de análisis (ej. resumen, ejecutivo, rápido, etc.)  
-  - Procesamiento y segmentación de textos largos para cumplir con las limitaciones de tokens.
-
-- **Documentación Automatizada:**  
-  - Exportación de resúmenes y análisis a documentos DOCX.
-  - Uso de Markdown para mejorar la presentación de la información.
-
-- **Interfaz de Línea de Comando (CLI):**  
-  - Comandos claros para cada modalidad: análisis de medios, texto, Slack, grabación en tiempo real, etc.
-  - Comando `version` para consultar la versión actual del agente.
-
-- **Integración y Automatización:**  
-  - Uso de Poetry para la gestión de dependencias y scripts.
-  - Makefile con targets para instalación, test, lint, formateo, documentación y ejecución del proyecto.
+- [Main Features](#main-features)
+- [Installation and Requirements](#installation-and-requirements)
+- [Usage and Examples](#usage-and-examples)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [Maintenance and Roadmap](#maintenance-and-roadmap)
+- [License](#license)
+- [Authors and Contact](#authors-and-contact)
 
 ---
 
-## Instalación y Requerimientos
+## Main Features
 
-### Requisitos Previos
+- **Slack Analysis:**  
+  - Download and process Slack messages (from channels or threads).  
+  - Intelligent replacement of user mentions for improved readability.  
+  - Filter messages by date range.
 
-- **Sistema Operativo:**  
-  - Compatible con Windows, macOS y Linux.
+- **Audio/Video Transcription:**  
+  - Extract and optimize audio from various media formats (MP4, AVI, MKV, MP3, WAV, etc.).  
+  - Automatically transcribe audio using OpenAI’s Whisper model.
+
+- **Summary Generation:**  
+  - Generate executive summaries, sentiment analysis, key points, and action items.
+  - **Automatic Template Selection:** The AI analyzes the content and automatically selects the best template based on context.
+  - Customize analysis templates (e.g., summary, executive, quick).
+  - Process and segment long texts to meet token limitations.
+
+- **Automated Documentation:**  
+  - Export summaries and analyses to DOCX files.
+  - Use Markdown formatting for enhanced clarity.
+
+- **Command Line Interface (CLI):**  
+  - Clear commands for multiple modes: media analysis, text summarization, Slack message analysis, real-time recording, etc.
+  - The `version` command displays the current version of the tool.
+
+- **Integration & Automation:**  
+  - Managed with Poetry for dependency and environment management.
+  - A Makefile with targets for setup, testing, linting, formatting, documentation generation, and running the application.
+
+---
+
+## Installation and Requirements
+
+### Prerequisites
+
+- **Operating System:**  
+  - Compatible with Windows, macOS, and Linux.
 - **Python:**  
-  - Versión 3.12 o superior.
+  - Version 3.12 or higher.
 - **Poetry:**  
-  - Para la gestión de entornos y dependencias.
+  - For environment and dependency management.
   
-  Puedes instalar Poetry mediante:
+  You can install Poetry by running:
   ```bash
   # macOS / Linux
   curl -sSL https://install.python-poetry.org | python3 -
@@ -68,141 +68,141 @@
   (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
   ```
 
-### Pasos de Instalación
+### Installation Steps
 
-1. **Clonar el Repositorio:**
+1. **Clone the Repository:**
    ```bash
    git clone https://github.com/tu_usuario/samuelizer.git
    cd samuelizer
    ```
 
-2. **Instalar las Dependencias:**
+2. **Install Dependencies:**
    ```bash
    poetry install
    ```
 
-3. **Configurar el Entorno:**
-   - Renombra el archivo `.env.example` a `.env`:
+3. **Configure the Environment:**
+   - Rename the `.env.example` file to `.env`:
      ```bash
      cp .env.example .env
      ```
-   - Edita el archivo `.env` para incluir tus credenciales y configuraciones, por ejemplo:
+   - Edit the `.env` file to set your credentials and configurations, for example:
      ```env
-     OPENAI_API_KEY=tu_openai_api_key
-     SLACK_TOKEN=tu_slack_token
+     OPENAI_API_KEY=your_openai_api_key
+     SLACK_TOKEN=your_slack_token
      SLACK_RATE_LIMIT_DELAY=1.0
      SLACK_BATCH_SIZE=1000
      OUTPUT_DIR=slack_exports
      LOG_FILE=slack_download.log
      ```
 
-4. **Verificar la Instalación:**
-   - Ejecuta:
+4. **Verify Installation:**
+   - Run:
      ```bash
      poetry run samuelize version
      ```
-   - Debe mostrarte la versión actual del agente.
+   - This should display the current version of the tool.
 
 ---
 
-## Uso y Ejemplos
+## Usage and Examples
 
-La aplicación cuenta con múltiples comandos de CLI que permiten acceder a distintas funcionalidades. A continuación, algunos ejemplos de uso:
+The application offers several CLI commands to access its features. Here are some examples:
 
-### Análisis de Medios (Audio/Video)
+### Media Analysis (Audio/Video)
 ```bash
-poetry run samuelize media ruta/al/archivo.mp4 --api_key tu_openai_api_key --optimize 32k --template executive
+poetry run samuelize media path/to/file.mp4 --api_key your_openai_api_key --optimize 32k --template executive
 ```
 
-### Resumen de Texto
+### Text Summarization
 ```bash
-poetry run samuelize text "Texto a analizar" --template quick
+poetry run samuelize text "Text to analyze" --template quick
 ```
 
-### Análisis de Mensajes Slack
+### Slack Message Analysis
 ```bash
 poetry run samuelize slack CHANNEL_ID --start-date 2024-01-01 --end-date 2024-02-01
 ```
 
-### Grabación y Análisis en Tiempo Real
+### Real-Time Recording and Analysis
 ```bash
 poetry run samuelize listen --duration 300
 ```
-*Nota:* Si no se especifica duración, la grabación será continua hasta interrumpirla manualmente (Ctrl+C).
+*Note:* If no duration is specified, recording will continue until manually interrupted (Ctrl+C).
 
-### Consultar la Versión
+### Check Version
 ```bash
 poetry run samuelize version
 ```
 
 ---
 
-## Estructura del Proyecto
+## Project Structure
 
-El repositorio tiene la siguiente organización principal:
+The repository is organized as follows:
 
-- **src/**: Contiene el código fuente.
-  - **cli.py**: Punto de entrada de la aplicación CLI.
-  - **transcription/**: Módulo de transcripción y resúmenes, con plantillas y manejo de excepciones.
-  - **slack/**: Integración con la API de Slack para descargar y procesar mensajes.
-  - **audio_capture/**: Código para la captura y procesamiento del audio del sistema.
-  - **config/**: Configuración global y manejo de variables de entorno.
-  - **utils/**: Utilidades varias (extracción de audio, helpers, etc.).
+- **src/**: Contains the source code.
+  - **cli.py**: Entry point for the CLI application.
+  - **transcription/**: Module for transcription and summary generation, including templates and exception handling.
+  - **slack/**: Integration with the Slack API for downloading and processing messages.
+  - **audio_capture/**: Code for capturing and processing system audio.
+  - **config/**: Global configuration and environment variable management.
+  - **utils/**: Various utilities (audio extraction, helper functions, etc.).
 
-- **Makefile**: Automación de tareas comunes (setup, test, lint, docs, etc.).
-- **pyproject.toml**: Configuración del proyecto y las dependencias gestionadas con Poetry.
-- **.env**: Archivo de configuración para claves y parámetros sensibles.
-- **README.md**: Este archivo, el cual explica a detalle el uso y las características del proyecto.
-
----
-
-## Contribuciones
-
-¡Las contribuciones son bienvenidas! Si deseas colaborar:
-
-1. **Fork del Repositorio:**  
-   Realiza un *fork* y crea una rama para tu funcionalidad o corrección.
-2. **Crear Pull Request:**  
-   Envía tus cambios con una descripción clara del aporte.
-3. **Issues y Feedback:**  
-   Abre un issue para reportar errores, proponer mejoras o discutir nuevas funcionalidades.
-
-Por favor, sigue la [Guía de Contribución](CONTRIBUTING.md) del proyecto y respeta las normas de estilo de código.
+- **Makefile**: Automates common tasks (setup, test, lint, docs, etc.).
+- **pyproject.toml**: Project configuration and dependency management via Poetry.
+- **.env**: Environment configuration file for credentials and sensitive parameters.
+- **README.md**: This file, detailing the project's usage and features.
 
 ---
 
-## Mantenimiento y Roadmap
+## Contributing
 
-### Roadmap (Planes Futuros)
+Contributions are welcome! To contribute:
 
-- **Optimización de Plantillas:**  
-  Implementación de un motor de plantillas (por ejemplo, Jinja2) para mayor flexibilidad y reusabilidad.
-- **Mejoras en el Procesamiento de Audio:**  
-  Incorporar manejo avanzado de errores y optimización en la extracción de audio.
-- **Integración Continua:**  
-  Implementar pipelines de CI/CD para tests automáticos, análisis de estilo y despliegues.
-- **Interfaz Web:**  
-  Exploración de una interfaz gráfica web para facilitar el uso por parte de usuarios no expertos.
-- **Soporte Multilenguaje:**  
-  Ampliar el sistema de plantillas a otros idiomas y contextos.
+1. **Fork the Repository:**  
+   Create a fork and develop your feature or fix in a new branch.
+2. **Submit a Pull Request:**  
+   Provide a clear description of your changes.
+3. **Issues and Feedback:**  
+   Open an issue for bug reports, improvement proposals, or feature discussions.
+
+Please follow the [Contributing Guidelines](CONTRIBUTING.md) and adhere to the code style standards.
 
 ---
 
-## Licencia
+## Maintenance and Roadmap
 
-Este proyecto está licenciado bajo la [Licencia MIT](LICENSE). Se eligió la Licencia MIT por su simplicidad y flexibilidad, permitiendo a otros desarrolladores utilizar, modificar y distribuir el código de manera libre.
+### Future Plans
+
+- **Template Optimization:**  
+  Implement a templating engine (e.g., Jinja2) for greater flexibility and reusability.
+- **Enhanced Audio Processing:**  
+  Improve error handling and optimize audio extraction.
+- **Continuous Integration:**  
+  Set up CI/CD pipelines for automated testing, style checks, and deployments.
+- **Web Interface:**  
+  Explore a graphical web interface for easier use by non-expert users.
+- **Multilanguage Support:**  
+  Expand the template system to support multiple languages and contexts.
 
 ---
 
-## Autores y Contacto
+## License
+
+This project is licensed under the [MIT License](LICENSE). The MIT License was chosen for its simplicity and flexibility, allowing developers to freely use, modify, and distribute the code.
+
+---
+
+## Authors and Contact
 
 - **ajerez** –  
-  Correo: [pobreiluso@gmail.com](mailto:pobreiluso@gmail.com)  
-  [GitHub](https://github.com/ajerez) | [Linkedin](https://www.linkedin.com/in/ajerez/)
+  Email: [pobreiluso@gmail.com](mailto:pobreiluso@gmail.com)  
+  [GitHub](https://github.com/ajerez) | [LinkedIn](https://www.linkedin.com/in/ajerez/)
 
-Si tienes dudas, sugerencias o deseas colaborar adicionalmente, no dudes en ponerte en contacto.
+If you have any questions, suggestions, or would like to contribute further, please feel free to get in touch.
 
 ---
 
-Este README está diseñado para servir tanto a desarrolladores como a usuarios finales, facilitando la comprensión, instalación y uso del proyecto sin importar su nivel de experiencia. ¡Bienvenido a Samuelizer!
+This README is designed to serve both developers and end users by providing clear guidance on how to install and use the project, regardless of experience level. Welcome to Samuelizer!
 
