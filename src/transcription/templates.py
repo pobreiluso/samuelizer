@@ -119,34 +119,34 @@ class PromptTemplates:
         "executive": {
             "system": "You are an AI specialized in creating executive summaries with clear structure and visual appeal.",
             "template": """
-            Genera un resumen ejecutivo estructurado:
+            Generate a structured executive summary:
 
-            🎯 Objetivo
-            • Propósito principal de la reunión/documento
+            🎯 Objective
+            • Main purpose of the meeting/document
             
-            💡 Puntos clave
-            • Máximo 3 puntos esenciales
-            • **Sin detalles innecesarios**
+            💡 Key Points
+            • Maximum 3 essential points
+            • **No unnecessary details**
             
-            ✨ Decisiones
-            • Lista de decisiones importantes
-            • Destaca el **impacto** de cada una
+            ✨ Decisions
+            • List of important decisions
+            • Highlight the **impact** of each one
             
-            📋 Próximos pasos
-            • [ ] Acciones concretas
-            • [ ] @Responsables
-            • [ ] 📅 Plazos
+            📋 Next Steps
+            • [ ] Concrete actions
+            • [ ] @Responsible persons
+            • [ ] 📅 Deadlines
             
-            🚀 Impacto esperado
-            • Resultados y beneficios clave
-            • Métricas relevantes
+            🚀 Expected Impact
+            • Key results and benefits
+            • Relevant metrics
             
-            Usa formato markdown para resaltar elementos importantes:
-            - Usa **negrita** para énfasis
-            - Usa `código` para referencias técnicas
-            - Usa > para citas importantes
+            Use markdown format to highlight important elements:
+            - Use **bold** for emphasis
+            - Use `code` for technical references
+            - Use > for important quotes
             
-            Texto a analizar:
+            Text to analyze:
             {text}
             """,
             "parameters": {
@@ -159,22 +159,22 @@ class PromptTemplates:
         "quick": {
             "system": "You are an AI that creates ultra-concise summaries with visual appeal.",
             "template": """
-            Genera un resumen ultra conciso:
+            Generate an ultra-concise summary:
 
-            💫 **Idea principal**
-            • Una frase que capture la esencia
+            💫 **Main Idea**
+            • A single sentence capturing the essence
 
-            🎯 **Puntos críticos**
-            • Máximo 3 bullets
-            • Solo lo verdaderamente importante
+            🎯 **Critical Points**
+            • Maximum 3 bullet points
+            • Only what is truly important
             
-            ✨ **Conclusión clave**
-            • Una frase con el resultado principal
+            ✨ **Key Conclusion**
+            • One sentence with the main result
 
-            Usa formato markdown para resaltar elementos importantes.
-            Evita toda información secundaria.
+            Use markdown format to highlight important elements.
+            Avoid all secondary information.
             
-            Texto a analizar:
+            Text to analyze:
             {text}
             """,
             "parameters": {
@@ -187,27 +187,27 @@ class PromptTemplates:
         "slack_brief": {
             "system": "You are an AI that creates ultra-concise Slack conversation summaries focusing only on decisions and actions.",
             "template": """
-            Analiza esta conversación de Slack y genera un resumen ultra conciso:
+            Analyze this Slack conversation and generate an ultra-concise summary:
 
             📍 **TL;DR**
-            • La esencia en una frase
+            • The essence in one sentence
 
-            🎯 **Decisiones**
-            • Solo decisiones finales tomadas
-            • Sin contexto ni discusiones
+            🎯 **Decisions**
+            • Only final decisions made
+            • No context or discussions
 
-            ⚡️ **Pendiente**
-            • [ ] Solo tareas NO completadas
-            • [ ] Con @responsable si existe
+            ⚡️ **Pending**
+            • [ ] Only tasks NOT completed
+            • [ ] With @responsible person if available
 
-            Reglas:
-            - Máxima brevedad
-            - Solo info CRÍTICA
-            - Ignorar discusiones/debates
-            - Omitir todo lo que no sea decisión/acción
-            - Usar emojis estratégicamente
+            Rules:
+            - Maximum brevity
+            - Only CRITICAL info
+            - Ignore discussions/debates
+            - Omit everything that is not a decision/action
+            - Use emojis strategically
 
-            Texto a analizar:
+            Text to analyze:
             {text}
             """,
             "parameters": {
@@ -221,40 +221,40 @@ class PromptTemplates:
         "slack_detailed": {
             "system": "You are an AI that creates structured summaries of Slack conversations with focus on context and outcomes.",
             "template": """
-            Analiza esta conversación de Slack y genera un resumen estructurado:
+            Analyze this Slack conversation and generate a structured summary:
 
-            📌 **Contexto**
-            • Tema central
-            • Participantes clave
+            📌 **Context**
+            • Central topic
+            • Key participants
 
-            💡 **Discusiones Principales**
-            • Tema → Conclusión
-            • Solo debates relevantes
-            • Incluir puntos de desacuerdo importantes
+            💡 **Main Discussions**
+            • Topic → Conclusion
+            • Only relevant debates
+            • Include important points of disagreement
 
-            ✅ **Decisiones Finales**
-            • Qué se decidió
-            • Por qué se decidió
-            • Impacto esperado
+            ✅ **Final Decisions**
+            • What was decided
+            • Why it was decided
+            • Expected impact
 
-            📋 **Plan de Acción**
-            • [ ] Tareas pendientes (@responsable)
-            • [ ] Próximos pasos
-            • [ ] Fechas clave
+            📋 **Action Plan**
+            • [ ] Pending tasks (@responsible person)
+            • [ ] Next steps
+            • [ ] Key dates
 
-            ⚠️ **Puntos de Atención**
-            • Bloqueantes/Riesgos
-            • Dependencias externas
-            • Recursos necesarios
+            ⚠️ **Points of Attention**
+            • Blockers/Risks
+            • External dependencies
+            • Required resources
 
-            Reglas:
-            - Mantener contexto relevante
-            - Destacar desacuerdos importantes
-            - Enfatizar decisiones y razones
-            - Incluir @menciones y #canales
-            - Usar emojis para mejorar lectura
+            Rules:
+            - Maintain relevant context
+            - Highlight important disagreements
+            - Emphasize decisions and reasons
+            - Include @mentions and #channels
+            - Use emojis to improve readability
 
-            Texto a analizar:
+            Text to analyze:
             {text}
             """,
             "parameters": {
@@ -371,49 +371,49 @@ class PromptTemplates:
         },
 
         "press_conference": {
-            "system": "Eres un redactor de noticias especializado en la cobertura de eventos públicos y ruedas de prensa.",
+            "system": "You are a news writer specialized in covering public events and press conferences.",
             "template": """
-            Analiza esta rueda de prensa y genera una noticia estructurada:
+            Analyze this press conference and generate a structured news article:
 
-            📰 **TITULAR**
-            • Breve, descriptivo y que capte la atención
+            📰 **HEADLINE**
+            • Brief, descriptive and attention-grabbing
             
-            📌 **SUBTÍTULO**
-            • Adelanto conciso de lo más relevante
+            📌 **SUBHEADING**
+            • Concise preview of the most relevant information
 
-            📝 **ENTRADILLA**
-            • Párrafo introductorio que responda a:
-              - Qué ocurrió
-              - Quién participó
-              - Por qué es importante
+            📝 **LEAD PARAGRAPH**
+            • Introductory paragraph that answers:
+              - What happened
+              - Who participated
+              - Why it's important
 
-            📄 **CUERPO DE LA NOTICIA**
+            📄 **BODY OF THE ARTICLE**
             
-            🔍 **Detalles Principales**
-            • Quién: Personas/instituciones involucradas
-            • Qué: Tema central o anuncio realizado
-            • Cómo: Modo o forma de implementación
-            • Cuándo: Fechas y plazos relevantes
-            • Dónde: Ubicación del evento/anuncio
-            • Por qué: Motivación o razón
+            🔍 **Main Details**
+            • Who: People/institutions involved
+            • What: Central topic or announcement made
+            • How: Method or form of implementation
+            • When: Relevant dates and deadlines
+            • Where: Location of the event/announcement
+            • Why: Motivation or reason
 
-            💬 **Citas Destacadas**
-            • Incluir declaraciones textuales relevantes
-            • Mantener el contexto de cada cita
+            💬 **Notable Quotes**
+            • Include relevant verbatim statements
+            • Maintain the context of each quote
 
-            ℹ️ **Información Adicional**
-            • Antecedentes relevantes
-            • Datos de contexto
-            • Próximos pasos
+            ℹ️ **Additional Information**
+            • Relevant background
+            • Contextual data
+            • Next steps
 
-            Reglas:
-            - Mantener estilo periodístico objetivo
-            - Priorizar información factual
-            - Incluir citas textuales relevantes
-            - Omitir elementos no mencionados
-            - Evitar especulaciones
+            Rules:
+            - Maintain objective journalistic style
+            - Prioritize factual information
+            - Include relevant direct quotes
+            - Omit unmentioned elements
+            - Avoid speculation
 
-            Texto a analizar:
+            Text to analyze:
             {text}
             """,
             "parameters": {
