@@ -315,7 +315,7 @@ def login_with_google():
     webbrowser.open('https://accounts.google.com/o/oauth2/auth?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&scope=https://www.googleapis.com/auth/drive.readonly&response_type=code', new=2)
 
 
-def main(api_key, file_path, diarization_flag="false"):
+def main(api_key, file_path, enable_diarization=False):
     try:
         logger.info("Beginning video transcription process...")
 
@@ -323,8 +323,6 @@ def main(api_key, file_path, diarization_flag="false"):
         audio_file = AudioExtractor.extract_audio(file_path)
         logger.info("Audio extracted, starting transcription...")
 
-        # Convert parameter to boolean (e.g., "true" enables diarization)
-        enable_diarization = diarization_flag.lower() in ("true", "1", "yes")
         transcription_text = AudioTranscriptionService().transcribe(audio_file, diarization=enable_diarization)
         logger.info("Transcription completed.")
 
@@ -355,9 +353,13 @@ def main(api_key, file_path, diarization_flag="false"):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        logger.error("Usage: python transcribe_video.py api_key file_path [enable_diarization]")
-        sys.exit(1)
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Transcribe video to meeting minutes with optional speaker diarization"
+    )
+    parser.add_argument("api_key", type=str, help="API key for OpenAI")
+    parser.add_argument("file_path", type=str, help="Path to the input video file")
+    parser.add_argument("--diarization", action="store_true", help="Enable speaker diarization")
+    args = parser.parse_args()
 
-    diar_flag = sys.argv[3] if len(sys.argv) >= 4 else "false"
-    main(sys.argv[1], sys.argv[2], diar_flag)
+    main(args.api_key, args.file_path, args.diarization)
