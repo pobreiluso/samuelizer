@@ -16,3 +16,5 @@ __pycache__/
 recordings/
 *.wav
 *.mp3
+*.log
+*.pyc
