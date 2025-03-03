@@ -18,3 +18,20 @@ recordings/
 *.mp3
 *.log
 *.pyc
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+__pypackages__/
+
+# Testing and coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+.tox/
+
+# IDE and editor config files
+.idea/
+.vscode/
