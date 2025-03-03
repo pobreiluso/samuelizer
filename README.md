@@ -30,6 +30,7 @@
 
 - **Generación de Resúmenes:**  
   - Resumen ejecutivo, análisis de sentimientos, puntos clave, y acciones a seguir.
+  - **Selección Automática de Plantillas:** La IA analiza el contenido y selecciona automáticamente la plantilla óptima según el contexto.
   - Personalización de plantillas de análisis (ej. resumen, ejecutivo, rápido, etc.)  
   - Procesamiento y segmentación de textos largos para cumplir con las limitaciones de tokens.
 
@@ -196,7 +197,7 @@ Este proyecto está licenciado bajo la [Licencia MIT](LICENSE). Se eligió la Li
 ## Autores y Contacto
 
 - **ajerez** –  
-  Correo: [ajerez@freepik.com](mailto:ajerez@freepik.com)  
+  Correo: [pobreiluso@gmail.com](mailto:pobreiluso@gmail.com)  
   [GitHub](https://github.com/ajerez) | [Linkedin](https://www.linkedin.com/in/ajerez/)
 
 Si tienes dudas, sugerencias o deseas colaborar adicionalmente, no dudes en ponerte en contacto.

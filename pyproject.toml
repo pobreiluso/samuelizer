@@ -2,7 +2,7 @@
 name = "samuelizer"
 version = "1.1.0"
 description = "AI Agent for summarizing Slack Channels, Threads, Meets..."
-authors = ["ajerez <ajerez@freepik.com>"]
+authors = ["ajerez <pobreiluso@gmail.com>"]
 readme = "README.md"
 packages = [{include = "src"}]
 
