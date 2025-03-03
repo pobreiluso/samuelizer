@@ -143,34 +143,34 @@ class AudioTranscriptionService:
                 return full_transcript
             else:
                 with tqdm(total=100, desc="Transcribing audio", unit="%", colour='green') as pbar:
-                # Update progress: Preparation
-                pbar.update(10)
-                logger.info("Preparing file for transcription...")
-                
-                # Update progress: Opening file
-                with open(audio_file_path, 'rb') as audio_file:
-                    pbar.update(20)
-                    logger.info("Sending file to OpenAI...")
+                    # Update progress: Preparation
+                    pbar.update(10)
+                    logger.info("Preparing file for transcription...")
                     
-                    # Update progress: Sending to OpenAI
-                    pbar.update(20)
-                    
-                    # Perform transcription
-                    transcription = openai.audio.transcriptions.create(
-                        model=self.model,
-                        file=audio_file,
-                        response_format="text"
-                    )
-                    
-                    # Update progress: Transcription completed
-                    pbar.update(40)
-                    logger.info("Transcription completed successfully")
-                    
-                    # Show result information
-                    if transcription:
-                        char_count = len(transcription)
-                        word_count = len(transcription.split())
-                        logger.info(f"Transcription generated: {word_count} words, {char_count} characters")
+                    # Update progress: Opening file
+                    with open(audio_file_path, 'rb') as audio_file:
+                        pbar.update(20)
+                        logger.info("Sending file to OpenAI...")
+                        
+                        # Update progress: Sending to OpenAI
+                        pbar.update(20)
+                        
+                        # Perform transcription
+                        transcription = openai.audio.transcriptions.create(
+                            model=self.model,
+                            file=audio_file,
+                            response_format="text"
+                        )
+                        
+                        # Update progress: Transcription completed
+                        pbar.update(40)
+                        logger.info("Transcription completed successfully")
+                        
+                        # Show result information
+                        if transcription:
+                            char_count = len(transcription)
+                            word_count = len(transcription.split())
+                            logger.info(f"Transcription generated: {word_count} words, {char_count} characters")
                     
             return transcription
         except openai.AuthenticationError as e:
