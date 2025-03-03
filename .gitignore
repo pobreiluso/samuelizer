@@ -1,2 +1,18 @@
 .aider*
 .env
+# Private data
+slack_exports/
+slack_download.log
+slack_summary.docx
+video_summary.docx
+meeting_minutes.log
+
+# System files
+.DS_Store
+__pycache__/
+*.pyc
+
+# Audio files
+recordings/
+*.wav
+*.mp3
