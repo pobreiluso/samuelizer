@@ -150,7 +150,7 @@ class SlackDownloader:
             return user_id
 
     def replace_user_mentions(self, text: str) -> str:
-        """Reemplaza las menciones de usuario en el texto"""
+        """Replaces user mentions in the text"""
         import re
         
         def replace_mention(match):
@@ -206,13 +206,13 @@ class SlackDownloader:
             "limit": self.config.batch_size,
         }
         
-        # Procesar menciones de usuario en los mensajes
+        # Process user mentions in messages
         def process_message(message):
             if "text" in message:
                 message["text"] = self.replace_user_mentions(message["text"])
             return message
 
-        # Añadir filtros de fecha si están especificados
+        # Add date filters if specified
         if self.config.start_date:
             params["oldest"] = self.convert_date_to_ts(self.config.start_date)
         if self.config.end_date:

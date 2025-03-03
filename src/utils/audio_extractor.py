@@ -95,7 +95,7 @@ class AudioExtractor:
         """
         logger.info(f"Processing media file: {input_file}...")
         
-        # Si es un archivo de audio soportado, verificar si necesita optimización
+        # If it's a supported audio file, check if it needs optimization
         if input_file.lower().endswith(('.mp3', '.wav', '.m4a', '.aac', '.ogg')):
             if not AudioExtractor.needs_optimization(input_file, target_bitrate):
                 logger.info("File is already optimized, skipping processing")
@@ -113,18 +113,18 @@ class AudioExtractor:
                 logger.info("Audio extraction cancelled by user.")
                 return output_audio
 
-        with tqdm(total=100, desc="Extrayendo audio", unit="%") as pbar:
+        with tqdm(total=100, desc="Extracting audio", unit="%") as pbar:
             logger.info("Starting audio extraction with ffmpeg...")
             pbar.update(10)
             subprocess.run([
                 'ffmpeg',
                 '-i', input_file,
                 '-vn',                    # No video
-                '-acodec', 'libmp3lame', # Usar codec MP3
-                '-b:a', target_bitrate,  # Bitrate objetivo
+                '-acodec', 'libmp3lame', # Use MP3 codec
+                '-b:a', target_bitrate,  # Target bitrate
                 '-ac', '1',              # Mono audio
-                '-ar', '16000',          # Sample rate de 16kHz (suficiente para voz)
-                '-y',                    # Sobrescribir archivo si existe
+                '-ar', '16000',          # Sample rate 16kHz (sufficient for voice)
+                '-y',                    # Overwrite file if exists
                 output_audio
             ], check=True)
             pbar.update(90)

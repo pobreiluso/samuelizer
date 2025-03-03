@@ -42,11 +42,11 @@ class SystemAudioCapture:
         self.recording = True
         self.stop_event.clear()
         
-        # Iniciar thread de grabación
+        # Start recording thread
         self.record_thread = Thread(target=self._record)
         self.record_thread.start()
         
-        # Iniciar thread de guardado
+        # Start saving thread
         self.save_thread = Thread(target=self._save_audio)
         self.save_thread.start()
         
@@ -92,7 +92,7 @@ class SystemAudioCapture:
         self.recording = False
         self.stop_event.set()
         
-        # Esperar a que terminen los threads
+        # Wait for threads to finish
         self.record_thread.join()
         self.save_thread.join()
         

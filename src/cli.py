@@ -121,7 +121,7 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template):
             result = analyzer.analyze(template)
             meeting_info = {template: result}
 
-        # Mostrar resultados en CLI
+        # Display results in CLI
         click.echo("\n=== Samuelization Summary ===")
         for key, value in meeting_info.items():
             click.echo(f"\n{key.replace('_', ' ').title()}:")
@@ -129,7 +129,7 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template):
             click.echo(value)
             click.echo()
 
-        # Guardar en docx si se solicita
+        # Save to docx if requested
         if output:
             DocumentManager.save_to_docx(meeting_info, output)
             logger.info(f"Document saved: {output}")
@@ -180,15 +180,15 @@ def summarize_text_command(text, api_key, output, template, params):
             result = analyzer.analyze(template, **template_params)
             meeting_info = {template: result}
 
-        # Mostrar resultados en CLI
-        click.echo("\n=== Resumen del Texto ===")
+        # Display results in CLI
+        click.echo("\n=== Text Summary ===")
         for key, value in meeting_info.items():
             click.echo(f"\n{key.replace('_', ' ').title()}:")
             click.echo("-" * 40)
             click.echo(value)
             click.echo()
 
-        # Guardar en docx si se solicita
+        # Save to docx if requested
         if output:
             DocumentManager.save_to_docx(meeting_info, output)
             logger.info(f"Document saved: {output}")
@@ -280,15 +280,15 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
             result = analyzer.analyze(template)
             meeting_info = {template: result}
         
-        # Mostrar resultados en CLI
-        click.echo("\n=== Resumen del Canal de Slack ===")
+        # Display results in CLI
+        click.echo("\n=== Slack Channel Summary ===")
         for key, value in meeting_info.items():
             click.echo(f"\n{key.replace('_', ' ').title()}:")
             click.echo("-" * 40)
             click.echo(value)
             click.echo()
 
-        # Guardar en docx si se solicita
+        # Save to docx if requested
         if output_file:
             DocumentManager.save_to_docx(meeting_info, output_file)
             logger.info(f"Document saved: {output_file}")
