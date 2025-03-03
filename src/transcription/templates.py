@@ -370,6 +370,60 @@ class PromptTemplates:
             }
         },
 
+        "press_conference": {
+            "system": "Eres un redactor de noticias especializado en la cobertura de eventos públicos y ruedas de prensa.",
+            "template": """
+            Analiza esta rueda de prensa y genera una noticia estructurada:
+
+            📰 **TITULAR**
+            • Breve, descriptivo y que capte la atención
+            
+            📌 **SUBTÍTULO**
+            • Adelanto conciso de lo más relevante
+
+            📝 **ENTRADILLA**
+            • Párrafo introductorio que responda a:
+              - Qué ocurrió
+              - Quién participó
+              - Por qué es importante
+
+            📄 **CUERPO DE LA NOTICIA**
+            
+            🔍 **Detalles Principales**
+            • Quién: Personas/instituciones involucradas
+            • Qué: Tema central o anuncio realizado
+            • Cómo: Modo o forma de implementación
+            • Cuándo: Fechas y plazos relevantes
+            • Dónde: Ubicación del evento/anuncio
+            • Por qué: Motivación o razón
+
+            💬 **Citas Destacadas**
+            • Incluir declaraciones textuales relevantes
+            • Mantener el contexto de cada cita
+
+            ℹ️ **Información Adicional**
+            • Antecedentes relevantes
+            • Datos de contexto
+            • Próximos pasos
+
+            Reglas:
+            - Mantener estilo periodístico objetivo
+            - Priorizar información factual
+            - Incluir citas textuales relevantes
+            - Omitir elementos no mencionados
+            - Evitar especulaciones
+
+            Texto a analizar:
+            {text}
+            """,
+            "parameters": {
+                "max_length": 800,
+                "style": "journalistic",
+                "format": "news_article",
+                "include_quotes": True
+            }
+        },
+
         "auto": {
             "system": """You are an AI expert in content analysis and template selection.
             Your task is to analyze the given text and determine the most appropriate template
@@ -409,6 +463,7 @@ class PromptTemplates:
             - summary: For general content requiring standard summary
             - action_items: For content focused on tasks and actions
             - sentiment: For content where tone and reactions matter
+            - press_conference: For press conferences and public announcements
 
             Text to analyze:
             {text}
