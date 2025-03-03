@@ -42,7 +42,8 @@ def cli():
 @click.option('--optimize', default='32k', help='Target bitrate for audio optimization (e.g. 32k, 64k)')
 @click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
 @click.option('--template', default='summary', help='Analysis template to use (summary, executive, quick)')
-def transcribe_media(file_path, api_key, drive_url, optimize, output, template):
+@click.option('--diarization', is_flag=True, help='Enable speaker diarization')
+def transcribe_media(file_path, api_key, drive_url, optimize, output, template, diarization):
     if not api_key:
         api_key = click.prompt('OpenAI API key', hide_input=True)
     
@@ -98,7 +99,7 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template):
         logger.info(f"Starting file transcription: {audio_file}")
         service = AudioTranscriptionService()
         try:
-            transcription = service.transcribe(audio_file)
+            transcription = service.transcribe(audio_file, diarization=diarization)
             logger.info(f"Transcription completed. Text length: {len(transcription)} characters")
         except Exception as e:
             logger.error(f"Error during transcription: {str(e)}")
