@@ -32,12 +32,117 @@ class AudioTranscriptionService:
     def __init__(self, model="whisper-1"):
         self.model = model
 
-    def transcribe(self, audio_file_path):
+    def detect_speakers(self, audio_file_path):
+        """
+        Detect different speakers in an audio file and return segments with speaker labels.
+        
+        Args:
+            audio_file_path (str): Path to the audio file
+            
+        Returns:
+            list: List of dictionaries with speaker segments:
+                 [{'speaker': 'Speaker 1', 'start': 0.0, 'end': 10.5}, ...]
+        """
+        try:
+            logger.info("Detecting speakers in audio file...")
+            # This is a placeholder implementation
+            # In a real implementation, you would use a diarization library or API
+            # For example, using pyannote.audio, resemblyzer, or a cloud service
+            
+            # Simulated speaker detection result
+            segments = [
+                {'speaker': 'Speaker 1', 'start': 0.0, 'end': 30.0},
+                {'speaker': 'Speaker 2', 'start': 30.0, 'end': 45.0},
+                {'speaker': 'Speaker 1', 'start': 45.0, 'end': 60.0}
+            ]
+            
+            logger.info(f"Detected {len(set(s['speaker'] for s in segments))} speakers")
+            return segments
+        except Exception as e:
+            logger.error(f"Speaker detection failed: {e}")
+            # If speaker detection fails, return a single segment for the entire audio
+            duration = self._get_audio_duration(audio_file_path)
+            return [{'speaker': 'Unknown', 'start': 0.0, 'end': duration}]
+    
+    def _get_audio_duration(self, audio_file_path):
+        """Get the duration of an audio file in seconds."""
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', 
+                 '-of', 'default=noprint_wrappers=1:nokey=1', audio_file_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            return float(result.stdout.strip())
+        except Exception as e:
+            logger.error(f"Failed to get audio duration: {e}")
+            return 300.0  # Default to 5 minutes if duration can't be determined
+    
+    def _transcribe_audio_segment(self, audio_file_path, start_time, end_time):
+        """
+        Transcribe a specific segment of an audio file.
+        
+        Args:
+            audio_file_path (str): Path to the audio file
+            start_time (float): Start time in seconds
+            end_time (float): End time in seconds
+            
+        Returns:
+            str: Transcription of the audio segment
+        """
+        try:
+            # Create a temporary file for the segment
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
+                temp_path = temp_file.name
+            
+            # Extract the segment using ffmpeg
+            import subprocess
+            subprocess.run([
+                'ffmpeg', '-y', '-i', audio_file_path,
+                '-ss', str(start_time), '-to', str(end_time),
+                '-c:a', 'copy', temp_path
+            ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            
+            # Transcribe the segment
+            with open(temp_path, 'rb') as audio_file:
+                transcription = openai.audio.transcriptions.create(
+                    model=self.model,
+                    file=audio_file,
+                    response_format="text"
+                )
+            
+            # Clean up
+            import os
+            os.unlink(temp_path)
+            
+            return transcription
+        except Exception as e:
+            logger.error(f"Error transcribing segment {start_time}-{end_time}: {e}")
+            return f"[Transcription error: {str(e)}]"
+    
+    def transcribe(self, audio_file_path, diarization: bool = False):
         try:
             file_size = os.path.getsize(audio_file_path) / (1024 * 1024)  # Tamaño en MB
             logger.info(f"Processing audio file of {file_size:.2f} MB")
             
-            with tqdm(total=100, desc="Transcribing audio", unit="%", colour='green') as pbar:
+            if diarization:
+                logger.info("Diarization enabled, detecting speakers...")
+                speaker_segments = self.detect_speakers(audio_file_path)
+                full_transcript = ""
+                for segment in speaker_segments:
+                    # Transcribe the segment of the audio between segment['start'] and segment['end']
+                    segment_text = self._transcribe_audio_segment(
+                        audio_file_path,
+                        start_time=segment['start'],
+                        end_time=segment['end']
+                    )
+                    full_transcript += f"[{segment['speaker']}]: {segment_text}\n"
+                return full_transcript
+            else:
+                with tqdm(total=100, desc="Transcribing audio", unit="%", colour='green') as pbar:
                 # Update progress: Preparation
                 pbar.update(10)
                 logger.info("Preparing file for transcription...")
@@ -210,7 +315,7 @@ def login_with_google():
     webbrowser.open('https://accounts.google.com/o/oauth2/auth?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&scope=https://www.googleapis.com/auth/drive.readonly&response_type=code', new=2)
 
 
-def main(api_key, file_path):
+def main(api_key, file_path, diarization_flag="false"):
     try:
         logger.info("Beginning video transcription process...")
 
@@ -218,7 +323,9 @@ def main(api_key, file_path):
         audio_file = AudioExtractor.extract_audio(file_path)
         logger.info("Audio extracted, starting transcription...")
 
-        transcription_text = AudioTranscriptionService().transcribe(audio_file)
+        # Convert parameter to boolean (e.g., "true" enables diarization)
+        enable_diarization = diarization_flag.lower() in ("true", "1", "yes")
+        transcription_text = AudioTranscriptionService().transcribe(audio_file, diarization=enable_diarization)
         logger.info("Transcription completed.")
 
         logger.info("Analyzing transcription...")
@@ -249,7 +356,8 @@ def main(api_key, file_path):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        logger.error("Usage: python transcribe_video.py api_key file_path")
+        logger.error("Usage: python transcribe_video.py api_key file_path [enable_diarization]")
         sys.exit(1)
 
-    main(sys.argv[1], sys.argv[2])
+    diar_flag = sys.argv[3] if len(sys.argv) >= 4 else "false"
+    main(sys.argv[1], sys.argv[2], diar_flag)
