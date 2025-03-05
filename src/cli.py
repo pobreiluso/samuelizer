@@ -101,6 +101,13 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template, 
         try:
             transcription = service.transcribe(audio_file, diarization=diarization)
             logger.info(f"Transcription completed. Text length: {len(transcription)} characters")
+            
+            # Save transcription to a text file if not already done by the service
+            output_txt = os.path.splitext(audio_file)[0] + "_transcription.txt"
+            if not os.path.exists(output_txt):
+                with open(output_txt, 'w', encoding='utf-8') as f:
+                    f.write(transcription)
+                logger.info(f"Transcription saved to: {output_txt}")
         except Exception as e:
             logger.error(f"Error during transcription: {str(e)}")
             raise

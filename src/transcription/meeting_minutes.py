@@ -171,6 +171,12 @@ class AudioTranscriptionService:
                             char_count = len(transcription)
                             word_count = len(transcription.split())
                             logger.info(f"Transcription generated: {word_count} words, {char_count} characters")
+                            
+                            # Save transcription to a text file
+                            output_txt = os.path.splitext(audio_file_path)[0] + "_transcription.txt"
+                            with open(output_txt, 'w', encoding='utf-8') as f:
+                                f.write(transcription)
+                            logger.info(f"Transcription saved to: {output_txt}")
                     
             return transcription
         except openai.AuthenticationError as e:
