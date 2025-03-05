@@ -324,6 +324,67 @@ class PromptTemplates:
             }
         },
 
+        "brainstorming": {
+            "system": "You are an AI specialized in capturing and organizing ideas from chaotic brainstorming sessions where multiple people speak simultaneously and ideas flow rapidly without structure.",
+            "template": """
+            Analyze this brainstorming session and extract all valuable ideas, even those mentioned briefly or incompletely. Organize them in the following format:
+
+            🌟 **Core Problem/Challenge**
+            • Identify the central problem or challenge being addressed
+            • Include context if available
+
+            💭 **All Ideas Captured** (don't miss any, even partial ones)
+            • Idea 1: [Brief description]
+            • Idea 2: [Brief description]
+            • ...
+            • Include even half-formed or interrupted ideas
+            • Capture ideas even when people talk over each other
+
+            🔍 **Idea Categories**
+            Group similar ideas into 3-5 categories such as:
+            
+            **Category 1: [Name]**
+            • Related idea 1
+            • Related idea 2
+            
+            **Category 2: [Name]**
+            • Related idea 3
+            • Related idea 4
+
+            💎 **Standout Concepts**
+            • Most innovative ideas
+            • Ideas that received positive reactions
+            • Unique approaches mentioned
+
+            🔄 **Potential Combinations**
+            • Identify ideas that could be combined for greater impact
+            • Note complementary concepts
+
+            ⚡️ **Next Steps**
+            • Suggested actions to develop promising ideas
+            • Areas requiring further brainstorming
+            • Potential prototypes or tests
+
+            Important guidelines:
+            - Capture ALL ideas, even those that seem incomplete or were interrupted
+            - Don't filter out "bad ideas" - in brainstorming, all ideas have potential value
+            - Pay attention to emotional reactions to ideas (excitement, agreement, etc.)
+            - Note when ideas build upon each other
+            - Preserve the creative essence of ideas even when they're expressed chaotically
+            - Use simple language to describe complex ideas
+
+            Text to analyze:
+            {text}
+            """,
+            "parameters": {
+                "max_length": 1200,
+                "style": "comprehensive",
+                "format": "structured",
+                "preserve_all_ideas": True,
+                "categorize_ideas": True
+            }
+        },
+
         "weekly_sync": {
             "system": "You are an AI specialized in analyzing and summarizing weekly team sync meetings.",
             "template": """
@@ -441,17 +502,20 @@ class PromptTemplates:
             - Is it a meeting? What kind? (1:1, team sync, presentation)
             - Is it a Slack conversation?
             - Is it a general document or transcript?
+            - Is it a brainstorming session?
 
             2. Content Structure:
             - How formal/informal is it?
             - Is it structured or free-flowing?
             - Are there clear sections or topics?
+            - Is it chaotic with multiple people speaking simultaneously?
 
             3. Content Elements:
             - Are there action items?
             - Are there decisions made?
             - Is there technical discussion?
             - Is there personal/career discussion?
+            - Are there many ideas being generated rapidly?
 
             Available templates:
             - one_to_one: For 1:1 meetings with focus on personal/career development
@@ -464,6 +528,7 @@ class PromptTemplates:
             - action_items: For content focused on tasks and actions
             - sentiment: For content where tone and reactions matter
             - press_conference: For press conferences and public announcements
+            - brainstorming: For chaotic idea generation sessions with multiple speakers and rapid idea flow
 
             Text to analyze:
             {text}
