@@ -3,6 +3,7 @@ import openai
 import logging
 from tqdm import tqdm
 from src.interfaces import TranscriptionService
+from src.transcription.audio_processor import AudioFileHandler, TranscriptionFileWriter, SpeakerDiarization
 
 logger = logging.getLogger(__name__)
 
