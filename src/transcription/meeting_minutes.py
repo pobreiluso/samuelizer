@@ -7,6 +7,7 @@ import openai
 import webbrowser
 import logging
 from tqdm import tqdm
+from src.interfaces import TranscriptionService
 from src.transcription.exceptions import (
     TranscriptionError,
     AnalysisError,
@@ -28,7 +29,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class AudioTranscriptionService:
+class AudioTranscriptionService(TranscriptionService):
     def __init__(self, model="whisper-1"):
         self.model = model
 

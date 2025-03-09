@@ -132,7 +132,7 @@ class SlackDownloader:
             url = f"{self.base_url}/users.info"
             params = {"user": user_id}
             
-            response = requests.get(url, headers=self.headers, params=params)
+            response = self.http_client.get(url, headers=self.headers, params=params)
             response.raise_for_status()
             data = response.json()
             
@@ -175,8 +175,7 @@ class SlackDownloader:
         params = {"channel": self.config.channel_id}
         
         try:
-            with requests.Session() as session:
-                response = session.get(url, headers=self.headers, params=params, verify=True)
+            response = self.http_client.get(url, headers=self.headers, params=params, verify=True)
                 response.raise_for_status()
                 data = response.json()
                 
@@ -224,7 +223,7 @@ class SlackDownloader:
         while True:
             try:
                 logging.info(f"Downloading page {page}...")
-                response = requests.get(url, headers=self.headers, params=params)
+                response = self.http_client.get(url, headers=self.headers, params=params)
                 response.raise_for_status()
                 data = response.json()
 
