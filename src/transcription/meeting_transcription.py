@@ -106,3 +106,25 @@ class AudioTranscriptionService(TranscriptionService):
         except Exception as e:
             logger.error(f"Error during transcription: {e}")
             raise Exception(f"Transcription failed: {e}")
+import os
+import logging
+from src.transcription.exceptions import TranscriptionError
+
+logger = logging.getLogger(__name__)
+
+class SegmentTranscriber:
+    def __init__(self, transcription_client, file_handler, model):
+        self.transcription_client = transcription_client
+        self.file_handler = file_handler
+        self.model = model
+
+    def transcribe_segment(self, audio_file_path, start_time, end_time):
+        try:
+            segment_path = self.file_handler.extract_segment(audio_file_path, start_time, end_time)
+            with open(segment_path, 'rb') as f:
+                transcription = self.transcription_client.transcribe(f, model=self.model)
+            os.unlink(segment_path)
+            return transcription
+        except Exception as e:
+            logger.error(f"Error transcribing segment from {start_time} to {end_time}: {e}")
+            raise TranscriptionError(f"Segment transcription failed: {e}") from e
