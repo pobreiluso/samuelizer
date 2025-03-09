@@ -38,3 +38,4 @@ class Config:
     # File paths and directories
     OUTPUT_DIR = os.getenv("OUTPUT_DIR", "slack_exports")
     LOG_FILE = os.getenv("LOG_FILE", "slack_download.log")
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
