@@ -79,11 +79,18 @@ class AudioTranscriptionService(TranscriptionService):
         self.file_writer = file_writer
 
     def _transcribe_segment(self, audio_file_path, start_time, end_time):
-        # Extract segment using the injected file_handler (AudioFileHandler)
-        segment_path = self.file_handler.extract_segment(audio_file_path, start_time, end_time)
-        with open(segment_path, 'rb') as segment_file:
-            segment_transcription = self.transcription_client.transcribe(segment_file, model=self.model)
-        os.unlink(segment_path)
+        # Try to extract a segment with the injected file_handler.
+        try:
+            segment_path = self.file_handler.extract_segment(audio_file_path, start_time, end_time)
+        except Exception as extraction_error:
+            logger.error(f"Segment extraction failed: {extraction_error}. Falling back to whole file transcription.")
+            with open(audio_file_path, 'rb') as audio_file:
+                return self.transcription_client.transcribe(audio_file, model=self.model)
+        try:
+            with open(segment_path, 'rb') as segment_file:
+                segment_transcription = self.transcription_client.transcribe(segment_file, model=self.model)
+        finally:
+            os.unlink(segment_path)
         return segment_transcription
 
     def transcribe_whole(self, audio_file_path):
