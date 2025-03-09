@@ -13,13 +13,14 @@ class AudioFileHandler:
     def get_audio_duration(audio_file_path):
         try:
             result = subprocess.run(
-                ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                ['ffprobe', '-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=duration',
                  '-of', 'default=noprint_wrappers=1:nokey=1', audio_file_path],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True
             )
-            return float(result.stdout.strip())
+            duration = result.stdout.strip()
+            return float(duration) if duration else 300.0
         except Exception as e:
             logger.error(f"Failed to get audio duration: {e}")
             return 300.0
