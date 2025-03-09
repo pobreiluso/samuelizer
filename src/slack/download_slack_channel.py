@@ -181,12 +181,12 @@ class SlackDownloader:
             response.raise_for_status()
             data = response.json()
                 
-                if not data.get("ok"):
-                    error_msg = data.get("error", "Unknown error")
-                    logger.error(f"Error from Slack API: {error_msg}")
-                    raise SlackAPIError(f"Slack API error: {error_msg}")
+            if not data.get("ok"):
+                error_msg = data.get("error", "Unknown error")
+                logger.error(f"Error from Slack API: {error_msg}")
+                raise SlackAPIError(f"Slack API error: {error_msg}")
                 
-                return data
+            return data
                 
         except requests.exceptions.RequestException as e:
             logger.error(f"Request failed: {str(e)}")
