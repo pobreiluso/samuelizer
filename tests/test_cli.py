@@ -56,3 +56,15 @@ def test_listen_command_simulation(monkeypatch):
     result = runner.invoke(cli, ['listen', '--duration', '1', '--api_key', 'dummy_key'])
     assert result.exit_code == 0
     assert ("transcribing recorded audio" in result.output.lower() or "audio saved to:" in result.output.lower())
+
+def test_media_command_valid_file(monkeypatch, tmp_path):
+    runner = CliRunner()
+    # Create a dummy mp3 file with dummy audio content to simulate valid file input
+    dummy_audio = tmp_path / "dummy.mp3"
+    dummy_audio.write_bytes(b"dummy audio contents")
+    # Monkeypatch AudioTranscriptionService.transcribe to bypass actual transcription and return dummy text
+    from src.transcription.meeting_transcription import AudioTranscriptionService
+    monkeypatch.setattr(AudioTranscriptionService, "transcribe", lambda self, file_path, diarization=False: "dummy transcription")
+    result = runner.invoke(cli, ['media', str(dummy_audio), '--api_key', 'dummy_key'])
+    assert result.exit_code == 0
+    assert "dummy transcription" in result.output.lower()
