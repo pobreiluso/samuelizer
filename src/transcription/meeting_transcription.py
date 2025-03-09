@@ -78,13 +78,31 @@ class AudioTranscriptionService(TranscriptionService):
         self.file_handler = file_handler
         self.file_writer = file_writer
 
+    def _transcribe_segment(self, audio_file_path, start_time, end_time):
+        # Extract segment using the injected file_handler (AudioFileHandler)
+        segment_path = self.file_handler.extract_segment(audio_file_path, start_time, end_time)
+        with open(segment_path, 'rb') as segment_file:
+            segment_transcription = self.transcription_client.transcribe(segment_file, model=self.model)
+        os.unlink(segment_path)
+        return segment_transcription
+
     def transcribe(self, audio_file_path, diarization: bool = False) -> str:
         try:
             logger.info("Starting transcription...")
-            with open(audio_file_path, 'rb') as audio_file:
-                transcription = self.transcription_client.transcribe(audio_file, model=self.model)
-            self.file_writer.save_transcription(transcription, audio_file_path)
-            return transcription
+            if diarization:
+                logger.info("Diarization enabled. Processing audio segments...")
+                segments = self.diarization_service.detect_speakers(audio_file_path)
+                full_transcript = ""
+                for seg in segments:
+                    seg_text = self._transcribe_segment(audio_file_path, start_time=seg['start'], end_time=seg['end'])
+                    full_transcript += f"[{seg['speaker']}]: {seg_text}\n"
+                self.file_writer.save_transcription(full_transcript, audio_file_path)
+                return full_transcript
+            else:
+                with open(audio_file_path, 'rb') as audio_file:
+                    transcription = self.transcription_client.transcribe(audio_file, model=self.model)
+                self.file_writer.save_transcription(transcription, audio_file_path)
+                return transcription
         except Exception as e:
             logger.error(f"Error during transcription: {e}")
             raise Exception(f"Transcription failed: {e}")
