@@ -8,18 +8,7 @@ from .templates import PromptTemplates
 
 logger = logging.getLogger(__name__)
 
-class TextPreprocessor:
-    """
-    Handles text preprocessing for analysis.
-    """
-    def __init__(self, max_chunk_size=4000):
-        self.max_chunk_size = max_chunk_size
-
-    def prepare_text(self, text: str) -> str:
-        if len(text) > self.max_chunk_size:
-            chunks = [text[i:i+self.max_chunk_size] for i in range(0, len(text), self.max_chunk_size)]
-            return "\n\n".join(chunks)
-        return text
+from src.transcription.text_preprocessor import TextPreprocessor
 
 class OpenAIAnalysisClient:
     """
