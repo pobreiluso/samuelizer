@@ -71,7 +71,7 @@ class AudioTranscriptionService(TranscriptionService):
     Service for transcribing audio files.
     Dependencies are injected to follow the Dependency Inversion Principle.
     """
-    def __init__(self, model="whisper-1", transcription_client, diarization_service, file_handler, file_writer):
+    def __init__(self, transcription_client, diarization_service, file_handler, file_writer, model="whisper-1"):
         self.model = model
         self.transcription_client = transcription_client
         self.diarization_service = diarization_service
