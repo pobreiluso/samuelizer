@@ -15,7 +15,7 @@ def test_version_command():
 def test_summarize_text_command(monkeypatch):
     runner = CliRunner()
     # Dummy the analysis in MeetingAnalyzer to avoid real API calls
-    monkeypatch.setattr("src.transcription.meeting_analyzer.MeetingAnalyzer.analyze", lambda self, template_name="summary", **kwargs: "Summary Dummy")
+    monkeypatch.setattr("src.transcription.meeting_analyzer.MeetingAnalyzer.analyze", lambda self, template, **kwargs: "Summary Dummy")
     result = runner.invoke(cli, ['text', 'Texto de prueba para analizar', '--api_key', 'dummy_key'])
     assert result.exit_code == 0
     # Either the dummy summary or the default CLI header is acceptable.
