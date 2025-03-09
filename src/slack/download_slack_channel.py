@@ -178,8 +178,8 @@ class SlackDownloader:
         
         try:
             response = self.http_client.get(url, headers=self.headers, params=params, verify=True)
-                response.raise_for_status()
-                data = response.json()
+            response.raise_for_status()
+            data = response.json()
                 
                 if not data.get("ok"):
                     error_msg = data.get("error", "Unknown error")
