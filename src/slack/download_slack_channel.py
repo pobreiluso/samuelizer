@@ -84,12 +84,13 @@ class SlackDownloader:
     - Export to JSON files
     """
     
-    def __init__(self, config: SlackConfig):
+    def __init__(self, config: SlackConfig, http_client=None):
         """
         Initialize the downloader with configuration.
         
         Args:
             config (SlackConfig): Configuration object with API credentials and settings
+            http_client: Optional HTTP client to allow dependency injection (defaults to requests)
             
         Creates:
             - Output directory if it doesn't exist
@@ -97,6 +98,7 @@ class SlackDownloader:
             - Empty user information cache
         """
         self.config = config
+        self.http_client = http_client or requests
         self.base_url = "https://slack.com/api"
         self.headers = {"Authorization": f"Bearer {self.config.token}"}
         self.users_cache = {}
