@@ -68,13 +68,15 @@ class OpenAITranscriptionClient:
 
 class AudioTranscriptionService(TranscriptionService):
     """
-    Service for transcribing audio files. This module is focused solely on the transcription process.
+    Service for transcribing audio files.
+    Dependencies are injected to follow the Dependency Inversion Principle.
     """
-    def __init__(self, model="whisper-1", transcription_client=None):
+    def __init__(self, model="whisper-1", transcription_client, diarization_service, file_handler, file_writer):
         self.model = model
-        self.transcription_client = transcription_client or OpenAITranscriptionClient()
-        self.file_handler = AudioFileHandler()
-        self.file_writer = TranscriptionFileWriter()
+        self.transcription_client = transcription_client
+        self.diarization_service = diarization_service
+        self.file_handler = file_handler
+        self.file_writer = file_writer
 
     def transcribe(self, audio_file_path, diarization: bool = False) -> str:
         try:
