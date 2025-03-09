@@ -15,6 +15,8 @@ from src.transcription.meeting_minutes import (
     VideoDownloader
 )
 from src.slack.download_slack_channel import SlackDownloader, SlackConfig
+from src.slack.http_client import RequestsClient
+from src.exporters.json_exporter import JSONExporter
 from src.transcription.exceptions import MeetingMinutesError
 from src.utils.audio_extractor import AudioExtractor
 

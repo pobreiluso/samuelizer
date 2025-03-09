@@ -13,6 +13,7 @@ import re
 from src.config.config import Config
 from src.interfaces import SlackServiceInterface
 from src.slack.http_client import HttpClientInterface, RequestsClient
+from src.exporters.json_exporter import JSONExporter
 
 # Custom exceptions
 class SlackAPIError(Exception):
