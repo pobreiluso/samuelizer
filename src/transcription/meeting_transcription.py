@@ -86,6 +86,12 @@ class AudioTranscriptionService(TranscriptionService):
         os.unlink(segment_path)
         return segment_transcription
 
+    def transcribe_whole(self, audio_file_path):
+        return self.transcribe(audio_file_path, diarization=False)
+
+    def transcribe_with_diarization(self, audio_file_path):
+        return self.transcribe(audio_file_path, diarization=True)
+
     def transcribe(self, audio_file_path, diarization: bool = False) -> str:
         try:
             logger.info("Starting transcription...")
