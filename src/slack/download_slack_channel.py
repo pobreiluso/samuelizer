@@ -3,7 +3,18 @@ import json
 import logging
 import click
 from datetime import datetime, timezone
+import time
+from typing import Dict, List, Optional
+import os
+from dataclasses import dataclass
+import argparse
+import sys
+import re
+from src.config.config import Config
+from src.interfaces import SlackServiceInterface
+from src.slack.http_client import HttpClientInterface, RequestsClient
 
+# Custom exceptions
 class SlackAPIError(Exception):
     """
     Custom exception for Slack API errors.
@@ -27,13 +38,6 @@ class RequestError(Exception):
     - SSL/TLS errors occur
     """
     pass
-import time
-from typing import Dict, List, Optional
-import os
-from dataclasses import dataclass
-import argparse
-import sys
-from src.config.config import Config
 
 # Initialize configuration
 config = Config()
@@ -72,37 +76,74 @@ class SlackConfig:
     rate_limit_delay: float = Config.SLACK_RATE_LIMIT_DELAY
     batch_size: int = Config.SLACK_BATCH_SIZE
 
-class SlackDownloader:
+class MessageProcessor:
     """
-    Main class for downloading and processing Slack messages.
+    Processes Slack messages to replace user mentions and other formatting
+    """
+    def __init__(self, slack_service: SlackServiceInterface):
+        self.slack_service = slack_service
+        
+    def replace_user_mentions(self, text: str) -> str:
+        """
+        Replaces user mentions in the text with user names
+        
+        Args:
+            text: Text containing user mentions in the format <@USER_ID>
+            
+        Returns:
+            str: Text with user mentions replaced by @username
+        """
+        if not text:
+            return text
+            
+        def replace_mention(match):
+            user_id = match.group(1)
+            return f"@{self.slack_service.get_user_info(user_id)}"
+            
+        return re.sub(r'<@([A-Z0-9]+)>', replace_mention, text)
+        
+    def process_message(self, message: Dict) -> Dict:
+        """
+        Process a Slack message to replace mentions and format text
+        
+        Args:
+            message: Slack message dictionary
+            
+        Returns:
+            Dict: Processed message
+        """
+        if "text" in message:
+            message["text"] = self.replace_user_mentions(message["text"])
+        return message
+
+class SlackDownloader(SlackServiceInterface):
+    """
+    Service for downloading and processing Slack messages.
     
     This class handles:
     - Authentication with Slack API
     - Message downloading with pagination
     - User information caching
-    - Message processing and formatting
-    - Export to JSON files
     """
     
-    def __init__(self, config: SlackConfig, http_client=None):
+    def __init__(self, config: SlackConfig, http_client: HttpClientInterface = None):
         """
         Initialize the downloader with configuration.
         
         Args:
-            config (SlackConfig): Configuration object with API credentials and settings
-            http_client: Optional HTTP client to allow dependency injection (defaults to requests)
-            
-        Creates:
-            - Output directory if it doesn't exist
-            - Authorization headers for API requests
-            - Empty user information cache
+            config: Configuration object with API credentials and settings
+            http_client: HTTP client for making requests (defaults to RequestsClient)
         """
         self.config = config
-        self.http_client = http_client or requests
+        self.http_client = http_client or RequestsClient()
         self.base_url = "https://slack.com/api"
         self.headers = {"Authorization": f"Bearer {self.config.token}"}
         self.users_cache = {}
         
+        # Create message processor
+        self.message_processor = MessageProcessor(self)
+        
+        # Ensure output directory exists
         if not os.path.exists(config.output_dir):
             os.makedirs(config.output_dir)
 
@@ -111,14 +152,10 @@ class SlackDownloader:
         Get Slack username from user ID with retry logic.
         
         Args:
-            user_id (str): Slack user ID to look up
+            user_id: Slack user ID to look up
             
         Returns:
-            str: User's display name or real name, falls back to unknown_user if not found
-            
-        Note:
-            Results are cached to minimize API calls
-            Implements retry logic for API failures
+            str: User's display name or real name, falls back to user_id if not found
         """
         if not user_id:
             logger.warning("Empty user_id provided")
@@ -151,27 +188,16 @@ class SlackDownloader:
             logger.warning(f"Error obteniendo info del usuario {user_id}: {e}")
             return user_id
 
-    def replace_user_mentions(self, text: str) -> str:
-        """Replaces user mentions in the text"""
-        import re
-        
-        def replace_mention(match):
-            user_id = match.group(1)
-            return f"@{self.get_user_info(user_id)}"
-            
-        return re.sub(r'<@([A-Z0-9]+)>', replace_mention, text)
-
     def get_channel_info(self) -> Dict:
         """
-        Obtiene información del canal de Slack
+        Get information about a Slack channel
         
         Returns:
-            Dict: Información del canal
+            Dict: Channel information
             
         Raises:
-            SlackAPIError: Si hay un error en la API de Slack
-            RequestError: Si hay un error en la solicitud HTTP
-            JSONDecodeError: Si la respuesta no es JSON válido
+            SlackAPIError: If there's an error in the Slack API
+            RequestError: If there's an error in the HTTP request
         """
         url = f"{self.base_url}/conversations.info"
         params = {"channel": self.config.channel_id}
@@ -196,22 +222,25 @@ class SlackDownloader:
             raise
 
     def convert_date_to_ts(self, date: datetime) -> str:
-        """Convierte un objeto datetime a timestamp de Slack"""
+        """Convert a datetime object to a Slack timestamp"""
         return str(int(date.timestamp()))
 
     def fetch_messages(self) -> List[Dict]:
-        """Descarga todos los mensajes del canal usando paginación y filtros de fecha"""
+        """
+        Download all messages from the channel using pagination and date filters
+        
+        Returns:
+            List[Dict]: List of message dictionaries
+            
+        Raises:
+            RequestError: If there's an error in the HTTP request
+            SlackAPIError: If there's an error in the Slack API
+        """
         url = f"{self.base_url}/conversations.history"
         params = {
             "channel": self.config.channel_id,
             "limit": self.config.batch_size,
         }
-        
-        # Process user mentions in messages
-        def process_message(message):
-            if "text" in message:
-                message["text"] = self.replace_user_mentions(message["text"])
-            return message
 
         # Add date filters if specified
         if self.config.start_date:
@@ -230,10 +259,11 @@ class SlackDownloader:
                 data = response.json()
 
                 if not data.get("ok"):
-                    raise Exception(f"Error en la API de Slack: {data.get('error')}")
+                    error_msg = data.get("error", "Unknown error")
+                    raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
 
                 messages = data["messages"]
-                processed_messages = [process_message(msg) for msg in messages]
+                processed_messages = [self.message_processor.process_message(msg) for msg in messages]
                 all_messages.extend(processed_messages)
                 logging.info(f"Downloaded {len(messages)} messages")
 
@@ -246,11 +276,9 @@ class SlackDownloader:
 
             except requests.exceptions.RequestException as e:
                 logging.error(f"Request error: {str(e)}")
-                raise
+                raise RequestError(f"Failed to connect to Slack API: {str(e)}")
 
         return all_messages
-
-    # Deprecated: Use JSONExporter from src/exporters/json_exporter.py instead.
 
 def parse_date(date_str: str) -> datetime:
     """
@@ -275,15 +303,7 @@ def parse_arguments():
     Parse command line arguments for the script.
     
     Returns:
-        argparse.Namespace: Parsed command line arguments containing:
-            - channel_id: Slack channel identifier
-            - start_date: Optional start date for filtering
-            - end_date: Optional end date for filtering
-            - output_dir: Directory for saving exports
-            - token: Slack API token
-            
-    Note:
-        The token can also be provided via SLACK_TOKEN environment variable
+        argparse.Namespace: Parsed command line arguments
     """
     parser = argparse.ArgumentParser(description='Download messages from a Slack channel')
     
@@ -328,7 +348,7 @@ def main():
     3. Creates SlackDownloader instance
     4. Downloads channel information
     5. Fetches messages with optional date filtering
-    6. Saves messages to JSON file
+    6. Saves messages to JSON file using JSONExporter
     
     Exits:
         0: Successful execution
@@ -340,6 +360,7 @@ def main():
         args.token = click.prompt('Slack Token', hide_input=True)
 
     try:
+        # Create configuration
         config = SlackConfig(
             token=args.token,
             channel_id=args.channel_id,
@@ -348,9 +369,12 @@ def main():
             output_dir=args.output_dir
         )
         
-        downloader = SlackDownloader(config)
+        # Create services with dependency injection
+        http_client = RequestsClient()
+        downloader = SlackDownloader(config, http_client)
+        exporter = JSONExporter()
         
-        # Obtener información del canal
+        # Get channel information
         channel_info = downloader.get_channel_info()
         channel_name = channel_info.get('channel', {}).get('name', 'unknown_channel')
         channel_type = channel_info.get('channel', {}).get('is_private', False)
@@ -358,17 +382,24 @@ def main():
         
         logging.info(f"Canal encontrado: {channel_name} (tipo: {channel_type_str})")
         
-        # Mostrar rango de fechas si está especificado
+        # Show date range if specified
         if config.start_date:
             logging.info(f"Fecha inicio: {config.start_date.strftime('%Y-%m-%d')}")
         if config.end_date:
             logging.info(f"Fecha fin: {config.end_date.strftime('%Y-%m-%d')}")
         
-        # Descargar mensajes
+        # Download messages
         messages = downloader.fetch_messages()
         
-        # Guardar mensajes
-        output_file = downloader.save_messages(messages)
+        # Save messages using the exporter
+        output_file = exporter.export_messages(
+            messages,
+            config.channel_id,
+            config.output_dir,
+            start_date=config.start_date,
+            end_date=config.end_date
+        )
+        
         logging.info(f"Se han descargado {len(messages)} mensajes")
         logging.info(f"Archivo guardado en: {output_file}")
 

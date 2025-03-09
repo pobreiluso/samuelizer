@@ -250,6 +250,7 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
     - OPENAI_API_KEY or --api_key: OpenAI API key
     """
     try:
+        # Create configuration
         slack_config = SlackConfig(
             token=token,
             channel_id=channel_id,
@@ -257,9 +258,17 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
             end_date=end_date,
             output_dir=output_dir
         )
-        downloader = SlackDownloader(slack_config)
+        
+        # Create services with dependency injection
+        http_client = RequestsClient()
+        downloader = SlackDownloader(slack_config, http_client)
+        exporter = JSONExporter()
+        
+        # Download messages
         messages = downloader.fetch_messages()
-        output_file = JSONExporter.export_messages(
+        
+        # Export messages to JSON
+        output_file = exporter.export_messages(
             messages,
             slack_config.channel_id,
             slack_config.output_dir,
@@ -267,6 +276,7 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
             end_date=slack_config.end_date
         )
         
+        # Find the latest JSON file
         json_files = glob.glob(os.path.join(output_dir, f"slack_messages_{channel_id}*.json"))
         if not json_files:
             logging.error("No JSON message files found.")
@@ -275,6 +285,7 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
         latest_file = max(json_files, key=os.path.getctime)
         logging.info(f"Latest message file: {latest_file}")
         
+        # Load messages from the JSON file
         with open(latest_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
@@ -283,8 +294,10 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
             logging.info("No messages to summarize.")
             sys.exit(0)
         
+        # Prepare text for analysis
         transcription_text = "\n".join([msg.get('text', '') for msg in messages])
         
+        # Analyze the messages
         analyzer = MeetingAnalyzer(transcription_text)
         
         if template == 'all':
@@ -303,9 +316,9 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
             click.echo()
 
         # Save to docx if requested
-        if output_file:
-            DocumentManager.save_to_docx(meeting_info, output_file)
-            logger.info(f"Document saved: {output_file}")
+        if output:
+            DocumentManager.save_to_docx(meeting_info, output)
+            logger.info(f"Document saved: {output}")
     
     except MeetingMinutesError as e:
         logging.error(f"Error processing Slack messages: {e}")
