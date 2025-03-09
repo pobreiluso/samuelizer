@@ -259,7 +259,13 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
         )
         downloader = SlackDownloader(slack_config)
         messages = downloader.fetch_messages()
-        output_file = downloader.save_messages(messages)
+        output_file = JSONExporter.export_messages(
+            messages,
+            slack_config.channel_id,
+            slack_config.output_dir,
+            start_date=slack_config.start_date,
+            end_date=slack_config.end_date
+        )
         
         json_files = glob.glob(os.path.join(output_dir, f"slack_messages_{channel_id}*.json"))
         if not json_files:

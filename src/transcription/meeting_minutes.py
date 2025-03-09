@@ -30,8 +30,9 @@ logger = logging.getLogger(__name__)
 
 
 class AudioTranscriptionService(TranscriptionService):
-    def __init__(self, model="whisper-1"):
+    def __init__(self, model="whisper-1", client=None):
         self.model = model
+        self.client = client or openai
 
     def detect_speakers(self, audio_file_path):
         """
@@ -109,7 +110,7 @@ class AudioTranscriptionService(TranscriptionService):
             
             # Transcribe the segment
             with open(temp_path, 'rb') as audio_file:
-                transcription = openai.audio.transcriptions.create(
+                transcription = self.client.audio.transcriptions.create(
                     model=self.model,
                     file=audio_file,
                     response_format="text"
@@ -157,7 +158,7 @@ class AudioTranscriptionService(TranscriptionService):
                         pbar.update(20)
                         
                         # Perform transcription
-                        transcription = openai.audio.transcriptions.create(
+                        transcription = self.client.audio.transcriptions.create(
                             model=self.model,
                             file=audio_file,
                             response_format="text"

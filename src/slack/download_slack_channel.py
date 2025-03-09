@@ -250,32 +250,7 @@ class SlackDownloader:
 
         return all_messages
 
-    def save_messages(self, messages: List[Dict]) -> str:
-        """Guarda los mensajes en un archivo JSON"""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-        date_range = ""
-        if self.config.start_date:
-            date_range += f"_from_{self.config.start_date.strftime('%Y%m%d')}"
-        if self.config.end_date:
-            date_range += f"_to_{self.config.end_date.strftime('%Y%m%d')}"
-        
-        filename = os.path.join(
-            self.config.output_dir,
-            f"slack_messages_{self.config.channel_id}{date_range}_{timestamp}.json"
-        )
-        
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump({
-                "channel_id": self.config.channel_id,
-                "download_date": timestamp,
-                "start_date": self.config.start_date.isoformat() if self.config.start_date else None,
-                "end_date": self.config.end_date.isoformat() if self.config.end_date else None,
-                "message_count": len(messages),
-                "messages": messages
-            }, f, indent=2, ensure_ascii=False)
-        
-        return filename
+    # Deprecated: Use JSONExporter from src/exporters/json_exporter.py instead.
 
 def parse_date(date_str: str) -> datetime:
     """
