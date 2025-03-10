@@ -42,7 +42,7 @@ def run_transcription(api_key: str, file_path: str, diarization: bool, use_cache
     transcription_service = AudioTranscriptionService(
         transcription_client=transcription_client,
         diarization_service=SpeakerDiarization(),
-        audio_file_handler=AudioFileHandler(),
+        file_handler=AudioFileHandler(),
         file_writer=TranscriptionFileWriter(),
         model_id=model_id,
         provider_name=provider_name,
