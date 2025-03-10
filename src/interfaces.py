@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Optional, Any, Union
+from typing import List, Dict, Optional, Any, Union, BinaryIO
 from datetime import datetime
 from pathlib import Path
 
@@ -15,6 +15,68 @@ class TranscriptionService(ABC):
             
         Returns:
             str: Transcribed text
+        """
+        pass
+
+class AIModelProviderInterface(ABC):
+    """
+    Interfaz base para proveedores de modelos de IA
+    """
+    @abstractmethod
+    def get_name(self) -> str:
+        """
+        Obtiene el nombre del proveedor
+        
+        Returns:
+            str: Nombre del proveedor
+        """
+        pass
+        
+    @abstractmethod
+    def get_available_models(self) -> List[str]:
+        """
+        Obtiene la lista de modelos disponibles
+        
+        Returns:
+            List[str]: Lista de identificadores de modelos disponibles
+        """
+        pass
+
+class TranscriptionModelInterface(ABC):
+    """
+    Interfaz para modelos de transcripción de audio a texto
+    """
+    @abstractmethod
+    def transcribe(self, audio_file: BinaryIO, model_id: str, **kwargs) -> str:
+        """
+        Transcribe un archivo de audio a texto
+        
+        Args:
+            audio_file: Archivo de audio abierto en modo binario
+            model_id: Identificador del modelo a utilizar
+            **kwargs: Parámetros adicionales específicos del modelo
+            
+        Returns:
+            str: Texto transcrito
+        """
+        pass
+
+class TextAnalysisModelInterface(ABC):
+    """
+    Interfaz para modelos de análisis de texto
+    """
+    @abstractmethod
+    def analyze(self, messages: List[Dict[str, str]], model_id: str, **kwargs) -> str:
+        """
+        Analiza un texto utilizando un modelo específico
+        
+        Args:
+            messages: Lista de mensajes en formato compatible con el modelo
+            model_id: Identificador del modelo a utilizar
+            **kwargs: Parámetros adicionales específicos del modelo
+            
+        Returns:
+            str: Resultado del análisis
         """
         pass
 
