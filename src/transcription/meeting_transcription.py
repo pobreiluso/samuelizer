@@ -9,50 +9,8 @@ from src.transcription.cache import FileCache, TranscriptionCacheService
 
 logger = logging.getLogger(__name__)
 
-class AudioFileHandler:
-    """
-    Responsible for handling audio file operations such as obtaining duration and extracting segments.
-    """
-    @staticmethod
-    def get_audio_duration(audio_file_path):
-        try:
-            import subprocess
-            result = subprocess.run(
-                ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', 
-                 '-of', 'default=noprint_wrappers=1:nokey=1', audio_file_path],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
-            return float(result.stdout.strip())
-        except Exception as e:
-            logger.error(f"Failed to get audio duration: {e}")
-            return 300.0
-
-    @staticmethod
-    def extract_segment(audio_file_path, start_time, end_time):
-        import tempfile
-        import subprocess
-        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
-            temp_path = temp_file.name
-        subprocess.run([
-            'ffmpeg', '-y', '-i', audio_file_path,
-            '-ss', str(start_time), '-to', str(end_time),
-            '-c:a', 'copy', temp_path
-        ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return temp_path
-
-class TranscriptionFileWriter:
-    """
-    Handles writing transcription results to text files.
-    """
-    @staticmethod
-    def save_transcription(transcription, audio_file_path):
-        output_txt = os.path.splitext(audio_file_path)[0] + "_transcription.txt"
-        with open(output_txt, 'w', encoding='utf-8') as f:
-            f.write(transcription)
-        logger.info(f"Transcription saved to: {output_txt}")
-        return output_txt
+# Eliminamos la duplicación de AudioFileHandler y TranscriptionFileWriter, 
+# ya que se importan de audio_processor.py
 
 class TranscriptionClient:
     """
@@ -99,7 +57,7 @@ class AudioTranscriptionService(TranscriptionService):
     Service for transcribing audio files.
     Dependencies are injected to follow the Dependency Inversion Principle.
     """
-    def __init__(self, transcription_client=None, diarization_service=None, file_handler=None, 
+    def __init__(self, transcription_client=None, diarization_service=None, audio_file_handler=None, 
                  file_writer=None, model_id="whisper-1", provider_name="openai", 
                  api_key=None, cache_service=None):
         self.model_id = model_id
@@ -115,7 +73,7 @@ class AudioTranscriptionService(TranscriptionService):
             self.transcription_client = transcription_client
             
         self.diarization_service = diarization_service
-        self.file_handler = file_handler
+        self.file_handler = audio_file_handler
         self.file_writer = file_writer
         
         # Initialize cache service if not provided
@@ -128,7 +86,12 @@ class AudioTranscriptionService(TranscriptionService):
     def _transcribe_segment(self, audio_file_path, start_time, end_time):
         # Try to extract a segment with the injected file_handler.
         try:
-            segment_path = self.file_handler.extract_segment(audio_file_path, start_time, end_time)
+            if self.file_handler:
+                segment_path = self.file_handler.extract_segment(audio_file_path, start_time, end_time)
+            else:
+                # Fallback to the AudioFileHandler class if file_handler is not provided
+                from src.transcription.audio_processor import AudioFileHandler
+                segment_path = AudioFileHandler.extract_segment(audio_file_path, start_time, end_time)
         except Exception as extraction_error:
             logger.error(f"Segment extraction failed: {extraction_error}. Falling back to whole file transcription.")
             with open(audio_file_path, 'rb') as audio_file:
