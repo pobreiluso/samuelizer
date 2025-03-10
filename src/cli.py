@@ -39,14 +39,16 @@ def cli():
 
 @cli.command('media')
 @click.argument('file_path')
-@click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
+@click.option('--api_key', help='API key for the selected provider.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 @click.option('--drive_url', required=False, help='Google Drive URL to download media file.')
 @click.option('--optimize', default='32k', help='Target bitrate for audio optimization (e.g. 32k, 64k)')
 @click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
 @click.option('--template', default='summary', help='Analysis template to use (summary, executive, quick)')
 @click.option('--diarization', is_flag=True, help='Enable speaker diarization')
 @click.option('--no-cache', is_flag=True, help='Disable transcription caching')
-def transcribe_media(file_path, api_key, drive_url, optimize, output, template, diarization, no_cache):
+@click.option('--provider', default='openai', help='AI provider to use (e.g., openai)')
+@click.option('--model', default='whisper-1', help='Model ID to use for transcription')
+def transcribe_media(file_path, api_key, drive_url, optimize, output, template, diarization, no_cache, provider, model):
     if not api_key:
         api_key = click.prompt('OpenAI API key', hide_input=True)
     
@@ -83,9 +85,11 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template, 
             logger.error("OpenAI API key not provided")
             sys.exit(1)
             
-        # Configurar OpenAI
-        os.environ["OPENAI_API_KEY"] = api_key
-        openai.api_key = api_key
+        # Configurar el proveedor de IA
+        if provider.lower() == 'openai' and api_key:
+            os.environ["OPENAI_API_KEY"] = api_key
+            if hasattr(openai, 'api_key'):
+                openai.api_key = api_key
             
         if drive_url:
             video_file = VideoDownloader.download_from_google_drive(drive_url)
@@ -102,9 +106,35 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template, 
         logger.info(f"Starting file transcription: {audio_file}")
         service = AudioTranscriptionService()
         try:
-            # Pass the no_cache flag to the transcription service
+            # Pass the no_cache flag and provider info to the transcription service
             use_cache = not no_cache
-            transcription = service.transcribe(audio_file, diarization=diarization, use_cache=use_cache)
+            
+            # Importar las clases necesarias
+            from src.transcription.meeting_transcription import TranscriptionClient
+            from src.transcription.audio_processor import AudioFileHandler, TranscriptionFileWriter, SpeakerDiarization
+            
+            # Crear el cliente de transcripción con el proveedor seleccionado
+            transcription_client = TranscriptionClient(
+                provider_name=provider,
+                api_key=api_key
+            )
+            
+            # Configurar el servicio de transcripción
+            service = AudioTranscriptionService(
+                transcription_client=transcription_client,
+                diarization_service=SpeakerDiarization(),
+                file_handler=AudioFileHandler(),
+                file_writer=TranscriptionFileWriter(),
+                model_id=model,
+                provider_name=provider,
+                api_key=api_key
+            )
+            
+            transcription = service.transcribe(
+                audio_file, 
+                diarization=diarization, 
+                use_cache=use_cache
+            )
             logger.info(f"Transcription completed. Text length: {len(transcription)} characters")
             
             # Save transcription to a text file if not already done by the service
@@ -338,11 +368,13 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
 @cli.command('listen')
 @click.option('--duration', type=int, help='Duration in seconds (0 for continuous)', default=0)
 @click.option('--output-dir', default='recordings', help='Directory to save recordings')
-@click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
+@click.option('--api_key', help='API key for the selected provider.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 @click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
 @click.option('--template', default='summary', help='Analysis template to use (summary, executive, quick)')
 @click.option('--no-cache', is_flag=True, help='Disable transcription caching')
-def listen_command(duration, output_dir, api_key, output, template, no_cache):
+@click.option('--provider', default='openai', help='AI provider to use (e.g., openai)')
+@click.option('--model', default='whisper-1', help='Model ID to use for transcription')
+def listen_command(duration, output_dir, api_key, output, template, no_cache, provider, model):
     """
     Listen and transcribe system audio in real-time.
     
@@ -381,7 +413,9 @@ def listen_command(duration, output_dir, api_key, output, template, no_cache):
                       output=output,
                       template=template,
                       diarization=False,
-                      no_cache=no_cache)
+                      no_cache=no_cache,
+                      provider=provider,
+                      model=model)
         else:
             click.echo(f"Audio saved to: {audio_file}")
             
@@ -393,6 +427,29 @@ def listen_command(duration, output_dir, api_key, output, template, no_cache):
 def version():
     """Displays the CLI agent version."""
     click.echo("samuelizer version 1.1.0")
+    
+@cli.command('providers')
+def list_providers():
+    """Lists available AI providers and their models."""
+    from src.config.providers import get_available_providers
+    
+    providers = get_available_providers()
+    
+    click.echo("\n=== Available AI Providers ===")
+    for provider_id, provider_info in providers.items():
+        click.echo(f"\n{provider_info['name']} ({provider_id}):")
+        click.echo(f"  Description: {provider_info['description']}")
+        click.echo(f"  Environment variable: {provider_info['env_var']}")
+        
+        click.echo("\n  Transcription models:")
+        for model in provider_info['transcription_models']:
+            default = " (default)" if model == provider_info.get('default_transcription_model') else ""
+            click.echo(f"    - {model}{default}")
+            
+        click.echo("\n  Analysis models:")
+        for model in provider_info['analysis_models']:
+            default = " (default)" if model == provider_info.get('default_analysis_model') else ""
+            click.echo(f"    - {model}{default}")
 
 if __name__ == '__main__':
     try:

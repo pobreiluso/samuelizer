@@ -54,19 +54,45 @@ class TranscriptionFileWriter:
         logger.info(f"Transcription saved to: {output_txt}")
         return output_txt
 
-class OpenAITranscriptionClient:
+class TranscriptionClient:
     """
-    OpenAI transcription client implementation.
+    Cliente de transcripción que utiliza el proveedor de modelos configurado.
     """
-    def __init__(self, client=None):
-        self.client = client or openai
+    def __init__(self, provider=None, provider_name="openai", api_key=None):
+        """
+        Inicializa el cliente de transcripción
+        
+        Args:
+            provider: Proveedor de modelos preconfigurado (opcional)
+            provider_name: Nombre del proveedor a utilizar si no se proporciona uno
+            api_key: Clave API para el proveedor (opcional)
+        """
+        from src.models.model_factory import ModelProviderFactory
+        
+        self.provider = provider
+        if not self.provider:
+            self.provider = ModelProviderFactory.get_transcription_model(
+                provider_name, api_key=api_key
+            )
+        self.provider_name = provider_name
 
-    def transcribe(self, audio_file, model, response_format="text"):
-        return self.client.audio.transcriptions.create(
-            model=model,
-            file=audio_file,
-            response_format=response_format
-        )
+    def transcribe(self, audio_file, model_id, **kwargs):
+        """
+        Transcribe un archivo de audio utilizando el proveedor configurado
+        
+        Args:
+            audio_file: Archivo de audio abierto en modo binario
+            model_id: Identificador del modelo a utilizar
+            **kwargs: Parámetros adicionales para el modelo
+            
+        Returns:
+            str: Texto transcrito
+        """
+        try:
+            return self.provider.transcribe(audio_file, model_id, **kwargs)
+        except Exception as e:
+            logger.error(f"Error en la transcripción con {self.provider_name}: {e}")
+            raise
 
 class AudioTranscriptionService(TranscriptionService):
     """
@@ -74,9 +100,20 @@ class AudioTranscriptionService(TranscriptionService):
     Dependencies are injected to follow the Dependency Inversion Principle.
     """
     def __init__(self, transcription_client=None, diarization_service=None, file_handler=None, 
-                 file_writer=None, model="whisper-1", cache_service=None):
-        self.model = model
-        self.transcription_client = transcription_client
+                 file_writer=None, model_id="whisper-1", provider_name="openai", 
+                 api_key=None, cache_service=None):
+        self.model_id = model_id
+        self.provider_name = provider_name
+        
+        # Inicializar el cliente de transcripción si no se proporciona
+        if transcription_client is None:
+            self.transcription_client = TranscriptionClient(
+                provider_name=provider_name, 
+                api_key=api_key
+            )
+        else:
+            self.transcription_client = transcription_client
+            
         self.diarization_service = diarization_service
         self.file_handler = file_handler
         self.file_writer = file_writer
@@ -95,10 +132,13 @@ class AudioTranscriptionService(TranscriptionService):
         except Exception as extraction_error:
             logger.error(f"Segment extraction failed: {extraction_error}. Falling back to whole file transcription.")
             with open(audio_file_path, 'rb') as audio_file:
-                return self.transcription_client.transcribe(audio_file, model=self.model)
+                return self.transcription_client.transcribe(audio_file, model_id=self.model_id)
         try:
             with open(segment_path, 'rb') as segment_file:
-                segment_transcription = self.transcription_client.transcribe(segment_file, model=self.model)
+                segment_transcription = self.transcription_client.transcribe(
+                    segment_file, 
+                    model_id=self.model_id
+                )
         finally:
             os.unlink(segment_path)
         return segment_transcription
@@ -113,7 +153,11 @@ class AudioTranscriptionService(TranscriptionService):
         try:
             # Check if we have a cache service and if the transcription is cached
             if use_cache and self.cache_service:
-                transcription_options = {'diarization': diarization, 'model': self.model}
+                transcription_options = {
+                    'diarization': diarization, 
+                    'model_id': self.model_id,
+                    'provider': self.provider_name
+                }
                 
                 if self.cache_service.has_cached_transcription(audio_file_path, transcription_options):
                     logger.info("Using cached transcription...")
@@ -122,7 +166,7 @@ class AudioTranscriptionService(TranscriptionService):
                     if cached_transcription:
                         return cached_transcription
             
-            logger.info("Starting transcription...")
+            logger.info(f"Starting transcription with provider: {self.provider_name}, model: {self.model_id}...")
             if diarization:
                 logger.info("Diarization enabled. Processing audio segments...")
                 segments = self.diarization_service.detect_speakers(audio_file_path)
@@ -134,19 +178,31 @@ class AudioTranscriptionService(TranscriptionService):
                 
                 # Cache the result if we have a cache service and caching is enabled
                 if use_cache and self.cache_service:
-                    transcription_options = {'diarization': diarization, 'model': self.model}
+                    transcription_options = {
+                        'diarization': diarization, 
+                        'model_id': self.model_id,
+                        'provider': self.provider_name
+                    }
                     self.cache_service.cache_transcription(
                         audio_file_path, full_transcript, transcription_options)
                 
                 return full_transcript
             else:
                 with open(audio_file_path, 'rb') as audio_file:
-                    transcription = self.transcription_client.transcribe(audio_file, model=self.model)
+                    transcription = self.transcription_client.transcribe(
+                        audio_file, 
+                        model_id=self.model_id,
+                        response_format="text"
+                    )
                 self.file_writer.save_transcription(transcription, audio_file_path)
                 
                 # Cache the result if we have a cache service and caching is enabled
                 if use_cache and self.cache_service:
-                    transcription_options = {'diarization': diarization, 'model': self.model}
+                    transcription_options = {
+                        'diarization': diarization, 
+                        'model_id': self.model_id,
+                        'provider': self.provider_name
+                    }
                     self.cache_service.cache_transcription(
                         audio_file_path, transcription, transcription_options)
                 
