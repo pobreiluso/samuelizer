@@ -45,7 +45,8 @@ def cli():
 @click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
 @click.option('--template', default='summary', help='Analysis template to use (summary, executive, quick)')
 @click.option('--diarization', is_flag=True, help='Enable speaker diarization')
-def transcribe_media(file_path, api_key, drive_url, optimize, output, template, diarization):
+@click.option('--no-cache', is_flag=True, help='Disable transcription caching')
+def transcribe_media(file_path, api_key, drive_url, optimize, output, template, diarization, no_cache):
     if not api_key:
         api_key = click.prompt('OpenAI API key', hide_input=True)
     
@@ -101,7 +102,9 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template, 
         logger.info(f"Starting file transcription: {audio_file}")
         service = AudioTranscriptionService()
         try:
-            transcription = service.transcribe(audio_file, diarization=diarization)
+            # Pass the no_cache flag to the transcription service
+            use_cache = not no_cache
+            transcription = service.transcribe(audio_file, diarization=diarization, use_cache=use_cache)
             logger.info(f"Transcription completed. Text length: {len(transcription)} characters")
             
             # Save transcription to a text file if not already done by the service
@@ -338,7 +341,8 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
 @click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 @click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
 @click.option('--template', default='summary', help='Analysis template to use (summary, executive, quick)')
-def listen_command(duration, output_dir, api_key, output, template):
+@click.option('--no-cache', is_flag=True, help='Disable transcription caching')
+def listen_command(duration, output_dir, api_key, output, template, no_cache):
     """
     Listen and transcribe system audio in real-time.
     
@@ -375,7 +379,9 @@ def listen_command(duration, output_dir, api_key, output, template):
                       drive_url=None,
                       optimize='32k',
                       output=output,
-                      template=template)
+                      template=template,
+                      diarization=False,
+                      no_cache=no_cache)
         else:
             click.echo(f"Audio saved to: {audio_file}")
             

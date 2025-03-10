@@ -2,8 +2,10 @@ import os
 import openai
 import logging
 from tqdm import tqdm
-from src.interfaces import TranscriptionService
+from typing import Dict, Any, Optional
+from src.interfaces import TranscriptionService, CacheInterface
 from src.transcription.audio_processor import AudioFileHandler, TranscriptionFileWriter, SpeakerDiarization
+from src.transcription.cache import FileCache, TranscriptionCacheService
 
 logger = logging.getLogger(__name__)
 
@@ -71,12 +73,20 @@ class AudioTranscriptionService(TranscriptionService):
     Service for transcribing audio files.
     Dependencies are injected to follow the Dependency Inversion Principle.
     """
-    def __init__(self, transcription_client, diarization_service, file_handler, file_writer, model="whisper-1"):
+    def __init__(self, transcription_client=None, diarization_service=None, file_handler=None, 
+                 file_writer=None, model="whisper-1", cache_service=None):
         self.model = model
         self.transcription_client = transcription_client
         self.diarization_service = diarization_service
         self.file_handler = file_handler
         self.file_writer = file_writer
+        
+        # Initialize cache service if not provided
+        if cache_service is None:
+            file_cache = FileCache()
+            self.cache_service = TranscriptionCacheService(file_cache)
+        else:
+            self.cache_service = cache_service
 
     def _transcribe_segment(self, audio_file_path, start_time, end_time):
         # Try to extract a segment with the injected file_handler.
@@ -99,8 +109,19 @@ class AudioTranscriptionService(TranscriptionService):
     def transcribe_with_diarization(self, audio_file_path):
         return self.transcribe(audio_file_path, diarization=True)
 
-    def transcribe(self, audio_file_path, diarization: bool = False) -> str:
+    def transcribe(self, audio_file_path, diarization: bool = False, use_cache: bool = True) -> str:
         try:
+            # Check if we have a cache service and if the transcription is cached
+            if use_cache and self.cache_service:
+                transcription_options = {'diarization': diarization, 'model': self.model}
+                
+                if self.cache_service.has_cached_transcription(audio_file_path, transcription_options):
+                    logger.info("Using cached transcription...")
+                    cached_transcription = self.cache_service.get_cached_transcription(
+                        audio_file_path, transcription_options)
+                    if cached_transcription:
+                        return cached_transcription
+            
             logger.info("Starting transcription...")
             if diarization:
                 logger.info("Diarization enabled. Processing audio segments...")
@@ -110,11 +131,25 @@ class AudioTranscriptionService(TranscriptionService):
                     seg_text = self._transcribe_segment(audio_file_path, start_time=seg['start'], end_time=seg['end'])
                     full_transcript += f"[{seg['speaker']}]: {seg_text}\n"
                 self.file_writer.save_transcription(full_transcript, audio_file_path)
+                
+                # Cache the result if we have a cache service and caching is enabled
+                if use_cache and self.cache_service:
+                    transcription_options = {'diarization': diarization, 'model': self.model}
+                    self.cache_service.cache_transcription(
+                        audio_file_path, full_transcript, transcription_options)
+                
                 return full_transcript
             else:
                 with open(audio_file_path, 'rb') as audio_file:
                     transcription = self.transcription_client.transcribe(audio_file, model=self.model)
                 self.file_writer.save_transcription(transcription, audio_file_path)
+                
+                # Cache the result if we have a cache service and caching is enabled
+                if use_cache and self.cache_service:
+                    transcription_options = {'diarization': diarization, 'model': self.model}
+                    self.cache_service.cache_transcription(
+                        audio_file_path, transcription, transcription_options)
+                
                 return transcription
         except Exception as e:
             logger.error(f"Error during transcription: {e}")

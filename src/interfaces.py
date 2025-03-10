@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Union
 from datetime import datetime
+from pathlib import Path
 
 class TranscriptionService(ABC):
     @abstractmethod
@@ -14,6 +15,54 @@ class TranscriptionService(ABC):
             
         Returns:
             str: Transcribed text
+        """
+        pass
+
+class CacheInterface(ABC):
+    @abstractmethod
+    def get(self, key: str) -> Optional[str]:
+        """
+        Retrieve a cached transcription
+        
+        Args:
+            key: Unique identifier for the cached item
+            
+        Returns:
+            Optional[str]: The cached transcription or None if not found
+        """
+        pass
+    
+    @abstractmethod
+    def set(self, key: str, value: str) -> None:
+        """
+        Store a transcription in the cache
+        
+        Args:
+            key: Unique identifier for the cached item
+            value: The transcription to cache
+        """
+        pass
+    
+    @abstractmethod
+    def has(self, key: str) -> bool:
+        """
+        Check if a transcription exists in the cache
+        
+        Args:
+            key: Unique identifier for the cached item
+            
+        Returns:
+            bool: True if the item exists in cache, False otherwise
+        """
+        pass
+    
+    @abstractmethod
+    def invalidate(self, key: str) -> None:
+        """
+        Remove a transcription from the cache
+        
+        Args:
+            key: Unique identifier for the cached item
         """
         pass
 

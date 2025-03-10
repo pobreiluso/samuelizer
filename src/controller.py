@@ -8,10 +8,11 @@ from src.slack.download_slack_channel import SlackDownloader, SlackConfig
 from src.slack.http_client import RequestsClient
 from src.exporters.json_exporter import JSONExporter
 from src.config.config import Config
+from src.transcription.cache import FileCache, TranscriptionCacheService
 
 logger = logging.getLogger(__name__)
 
-def run_transcription(api_key: str, file_path: str, diarization: bool) -> str:
+def run_transcription(api_key: str, file_path: str, diarization: bool, use_cache: bool = True) -> str:
     os.environ["OPENAI_API_KEY"] = api_key
     openai.api_key = api_key
 
@@ -23,15 +24,22 @@ def run_transcription(api_key: str, file_path: str, diarization: bool) -> str:
 
     # Import dependencies for audio processing
     from src.transcription.audio_processor import AudioFileHandler, TranscriptionFileWriter, SpeakerDiarization
+    
+    # Set up cache service if enabled
+    cache_service = None
+    if use_cache:
+        file_cache = FileCache()
+        cache_service = TranscriptionCacheService(file_cache)
 
     transcription_service = AudioTranscriptionService(
         transcription_client=OpenAITranscriptionClient(),
         diarization_service=SpeakerDiarization(),
         file_handler=AudioFileHandler(),
         file_writer=TranscriptionFileWriter(),
-        model="whisper-1"
+        model="whisper-1",
+        cache_service=cache_service
     )
-    transcription = transcription_service.transcribe(audio_file, diarization=diarization)
+    transcription = transcription_service.transcribe(audio_file, diarization=diarization, use_cache=use_cache)
     logger.info("Transcription completed.")
     return transcription
 
