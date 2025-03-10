@@ -1,6 +1,7 @@
 from docx import Document
 import logging
 import os
+import openai
 from typing import Optional, List, Dict, Any
 from src.transcription.exceptions import AnalysisError
 from src.interfaces import TranscriptionService, TextAnalysisModelInterface
