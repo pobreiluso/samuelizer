@@ -104,7 +104,6 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template, 
         
         # Transcribe audio
         logger.info(f"Starting file transcription: {audio_file}")
-        service = AudioTranscriptionService()
         try:
             # Pass the no_cache flag and provider info to the transcription service
             use_cache = not no_cache
@@ -404,6 +403,10 @@ def listen_command(duration, output_dir, api_key, output, template, no_cache, pr
         
         if api_key:
             click.echo("Transcribing recorded audio...")
+            # Importar las clases necesarias aquí para asegurar que estén disponibles
+            from src.transcription.meeting_transcription import TranscriptionClient, AudioTranscriptionService
+            from src.transcription.audio_processor import AudioFileHandler, TranscriptionFileWriter, SpeakerDiarization
+            
             ctx = click.get_current_context()
             ctx.invoke(transcribe_media, 
                       file_path=audio_file,
