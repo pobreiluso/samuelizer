@@ -110,7 +110,7 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template, 
             use_cache = not no_cache
             
             # Importar las clases necesarias
-            from src.transcription.meeting_transcription import TranscriptionClient
+            from src.transcription.meeting_transcription import TranscriptionClient, AudioTranscriptionService
             from src.transcription.audio_processor import AudioFileHandler, TranscriptionFileWriter, SpeakerDiarization
             
             # Crear el cliente de transcripción con el proveedor seleccionado
@@ -123,7 +123,7 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template, 
             service = AudioTranscriptionService(
                 transcription_client=transcription_client,
                 diarization_service=SpeakerDiarization(),
-                file_handler=AudioFileHandler(),
+                audio_file_handler=AudioFileHandler(),
                 file_writer=TranscriptionFileWriter(),
                 model_id=model,
                 provider_name=provider,
