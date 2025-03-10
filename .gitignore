@@ -6,6 +6,7 @@ slack_download.log
 slack_summary.docx
 video_summary.docx
 meeting_minutes.log
+cli_agent.log
 
 # System files
 .DS_Store
