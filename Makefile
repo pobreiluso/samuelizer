@@ -70,5 +70,8 @@ help:
 	@echo "  poetry run samuelize version          - Display version information"
 	@echo "  poetry run samuelize providers        - List available AI providers and models"
 	@echo ""
+	@echo "Offline Mode:"
+	@echo "  poetry run samuelize media FILE_PATH --offline  - Process files completely locally"
+	@echo ""
 	@echo "For more details on each command, run:"
 	@echo "  poetry run samuelize COMMAND --help"

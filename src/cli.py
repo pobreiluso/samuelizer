@@ -49,16 +49,17 @@ def cli():
 @click.option('--provider', default='openai', help='AI provider to use (e.g., openai, local)')
 @click.option('--model', default='whisper-1', help='Model ID to use for transcription')
 @click.option('--local', is_flag=True, help='Use local models instead of API-based ones')
-@click.option('--whisper-size', default='base', help='Whisper model size when using --local')
-@click.option('--text-model', default='facebook/bart-large-cnn', help='Text model when using --local')
-def transcribe_media(file_path, api_key, drive_url, optimize, output, template, diarization, no_cache, provider, model, local, whisper_size, text_model):
-    # Si se especifica --local, usar el proveedor local
-    if local:
+@click.option('--offline', is_flag=True, help='Alias for --local, process completely offline')
+@click.option('--whisper-size', default='base', help='Whisper model size when using --local/--offline')
+@click.option('--text-model', default='facebook/bart-large-cnn', help='Text model when using --local/--offline')
+def transcribe_media(file_path, api_key, drive_url, optimize, output, template, diarization, no_cache, provider, model, local, offline, whisper_size, text_model):
+    # Si se especifica --local o --offline, usar el proveedor local
+    if local or offline:
         provider = "local"
         model = whisper_size
         # No se necesita API key para modelos locales
         api_key = None
-        logger.info("Usando modelos locales para procesamiento")
+        logger.info("Usando modelos locales para procesamiento (modo offline)")
     elif not api_key and provider == "openai":
         api_key = click.prompt('OpenAI API key', hide_input=True)
     
@@ -464,102 +465,6 @@ def list_providers():
             default = " (default)" if model == provider_info.get('default_analysis_model') else ""
             click.echo(f"    - {model}{default}")
 
-@cli.command('offline')
-@click.argument('file_path')
-@click.option('--whisper-size', default='base', help='Whisper model size (tiny, base, small, medium, large)')
-@click.option('--text-model', default='facebook/bart-large-cnn', help='Text analysis model ID')
-@click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
-@click.option('--template', default='summary', help='Analysis template to use')
-@click.option('--diarization', is_flag=True, help='Enable speaker diarization')
-def offline_mode(file_path, whisper_size, text_model, output, template, diarization):
-    """
-    Process media files completely offline without any external API calls.
-    
-    FILE_PATH: Path to media file to process
-    """
-    try:
-        # Verificar que el archivo existe
-        file_path = os.path.expanduser(file_path)
-        if not os.path.exists(file_path):
-            logger.error(f"File does not exist: {file_path}")
-            sys.exit(1)
-            
-        # Extraer audio si es necesario
-        if not file_path.lower().endswith('.mp3'):
-            audio_file = AudioExtractor.extract_audio(file_path)
-        else:
-            audio_file = file_path
-            
-        logger.info("Iniciando procesamiento en modo offline (completamente local)...")
-        
-        # Importar las clases necesarias
-        from src.transcription.meeting_transcription import TranscriptionClient, AudioTranscriptionService
-        from src.transcription.audio_processor import AudioFileHandler, TranscriptionFileWriter, SpeakerDiarization
-        from src.models.local_adapter import LocalProvider
-        
-        # Crear el proveedor local directamente
-        provider = LocalProvider(whisper_model_size=whisper_size, text_model_id=text_model)
-        
-        # Configurar el cliente de transcripción con el proveedor local
-        transcription_client = TranscriptionClient(provider=provider)
-        
-        # Configurar el servicio de transcripción
-        service = AudioTranscriptionService(
-            transcription_client=transcription_client,
-            diarization_service=SpeakerDiarization(),
-            audio_file_handler=AudioFileHandler(),
-            file_writer=TranscriptionFileWriter(),
-            model_id=whisper_size,
-            provider_name="local"
-        )
-        
-        # Transcribir
-        logger.info("Transcribiendo audio localmente...")
-        transcription = service.transcribe(audio_file, diarization=diarization)
-        
-        # Guardar transcripción en un archivo de texto
-        output_txt = os.path.splitext(audio_file)[0] + "_transcription.txt"
-        with open(output_txt, 'w', encoding='utf-8') as f:
-            f.write(transcription)
-        logger.info(f"Transcripción guardada en: {output_txt}")
-        
-        # Analizar con el modelo local
-        from src.transcription.meeting_analyzer import MeetingAnalyzer, AnalysisClient
-        
-        # Crear cliente de análisis con el proveedor local
-        analysis_client = AnalysisClient(provider=provider)
-        
-        # Crear analizador
-        analyzer = MeetingAnalyzer(
-            transcription=transcription,
-            analysis_client=analysis_client,
-            model_id=text_model
-        )
-        
-        # Analizar con la plantilla seleccionada
-        logger.info(f"Analizando transcripción con plantilla '{template}'...")
-        result = analyzer.analyze(template)
-        meeting_info = {template: result}
-        
-        # Mostrar resultados
-        click.echo("\n=== Análisis Offline (100% Local) ===")
-        for key, value in meeting_info.items():
-            click.echo(f"\n{key.replace('_', ' ').title()}:")
-            click.echo("-" * 40)
-            click.echo(value)
-            click.echo()
-            
-        # Guardar en DOCX si se solicita
-        if output:
-            from src.transcription.meeting_minutes import DocumentManager
-            DocumentManager.save_to_docx(meeting_info, output)
-            logger.info(f"Documento guardado en: {output}")
-            
-    except Exception as e:
-        logger.error(f"Error en modo offline: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        sys.exit(1)
 
 if __name__ == '__main__':
     try:
