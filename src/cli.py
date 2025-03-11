@@ -41,7 +41,7 @@ def cli():
 @click.argument('file_path')
 @click.option('--api_key', help='API key for the selected provider.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 @click.option('--drive_url', required=False, help='Google Drive URL to download media file.')
-@click.option('--optimize', default='32k', help='Target bitrate for audio optimization (e.g. 32k, 64k)')
+@click.option('--optimize', default='128k', help='Target bitrate for audio optimization (e.g. 32k, 64k, 128k)')
 @click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
 @click.option('--template', default='summary', help='Analysis template to use (summary, executive, quick)')
 @click.option('--diarization', is_flag=True, help='Enable speaker diarization')
@@ -52,7 +52,9 @@ def cli():
 @click.option('--offline', is_flag=True, help='Alias for --local, process completely offline')
 @click.option('--whisper-size', default='base', help='Whisper model size when using --local/--offline')
 @click.option('--text-model', default='facebook/bart-large-cnn', help='Text model when using --local/--offline')
-def transcribe_media(file_path, api_key, drive_url, optimize, output, template, diarization, no_cache, provider, model, local, offline, whisper_size, text_model):
+@click.option('--keep-silence', is_flag=True, help='Do not remove long silences from audio')
+@click.option('--max-size', default=100, help='Maximum audio file size in MB before applying more aggressive optimization')
+def transcribe_media(file_path, api_key, drive_url, optimize, output, template, diarization, no_cache, provider, model, local, offline, whisper_size, text_model, keep_silence, max_size):
     # Si se especifica --local o --offline, usar el proveedor local
     if local or offline:
         provider = "local"
@@ -110,7 +112,12 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template, 
             audio_file = file_path
         else:
             # Extract audio from video
-            audio_file = AudioExtractor.extract_audio(file_path, target_bitrate=optimize)
+            audio_file = AudioExtractor.extract_audio(
+                file_path, 
+                target_bitrate=optimize,
+                remove_silences=not keep_silence,
+                max_size_mb=max_size
+            )
         
         # Transcribe audio
         logger.info(f"Starting file transcription: {audio_file}")
@@ -383,7 +390,10 @@ def analyze_slack_messages(channel_id, start_date, end_date, output_dir, token, 
 @click.option('--no-cache', is_flag=True, help='Disable transcription caching')
 @click.option('--provider', default='openai', help='AI provider to use (e.g., openai)')
 @click.option('--model', default='whisper-1', help='Model ID to use for transcription')
-def listen_command(duration, output_dir, api_key, output, template, no_cache, provider, model):
+@click.option('--keep-silence', is_flag=True, help='Do not remove long silences from audio')
+@click.option('--optimize', default='128k', help='Target bitrate for audio optimization (e.g. 32k, 64k, 128k)')
+@click.option('--max-size', default=100, help='Maximum audio file size in MB before applying more aggressive optimization')
+def listen_command(duration, output_dir, api_key, output, template, no_cache, provider, model, keep_silence, optimize, max_size):
     """
     Listen and transcribe system audio in real-time.
     
@@ -422,13 +432,15 @@ def listen_command(duration, output_dir, api_key, output, template, no_cache, pr
                       file_path=audio_file,
                       api_key=api_key,
                       drive_url=None,
-                      optimize='32k',
+                      optimize=optimize,
                       output=output,
                       template=template,
                       diarization=False,
                       no_cache=no_cache,
                       provider=provider,
-                      model=model)
+                      model=model,
+                      keep_silence=keep_silence,
+                      max_size=max_size)
         else:
             click.echo(f"Audio saved to: {audio_file}")
             
