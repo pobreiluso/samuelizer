@@ -20,9 +20,18 @@ def run_transcription(api_key: str, file_path: str, diarization: bool, use_cache
 
     # If file is not MP3, extract audio from video
     if not file_path.lower().endswith('.mp3'):
+        from src.utils.audio_optimizer import AudioOptimizer
         audio_file = AudioExtractor.extract_audio(file_path)
     else:
-        audio_file = file_path
+        # Check if MP3 needs optimization
+        from src.utils.audio_optimizer import AudioOptimizer
+        if AudioOptimizer.needs_optimization(file_path):
+            output_dir = os.path.dirname(file_path) or "recordings"
+            os.makedirs(output_dir, exist_ok=True)
+            output_audio = os.path.join(output_dir, os.path.splitext(os.path.basename(file_path))[0] + '_optimized.mp3')
+            audio_file = AudioOptimizer.optimize_audio(file_path, output_audio)
+        else:
+            audio_file = file_path
 
     # Import dependencies for audio processing
     from src.transcription.audio_processor import AudioFileHandler, TranscriptionFileWriter, SpeakerDiarization

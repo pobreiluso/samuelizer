@@ -111,7 +111,9 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template, 
         if file_path.lower().endswith('.mp3'):
             audio_file = file_path
         else:
-            # Extract audio from video
+            # Extract audio from video and optimize it
+            from src.utils.audio_optimizer import AudioOptimizer
+            
             audio_file = AudioExtractor.extract_audio(
                 file_path, 
                 target_bitrate=optimize,
