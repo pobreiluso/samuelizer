@@ -117,6 +117,27 @@ class FileCache(CacheInterface):
                 logger.info(f"Invalidated cache for key: {key[:8]}...")
             except IOError as e:
                 logger.error(f"Failed to invalidate cache: {e}")
+                
+    def clear_all(self) -> None:
+        """
+        Clear all cached transcriptions
+        
+        Returns:
+            None
+        """
+        self._ensure_cache_dir()
+        cache_files = os.listdir(self.cache_dir)
+        
+        count = 0
+        for filename in cache_files:
+            if filename.endswith('.json'):
+                try:
+                    os.remove(os.path.join(self.cache_dir, filename))
+                    count += 1
+                except IOError as e:
+                    logger.error(f"Failed to remove cache file {filename}: {e}")
+        
+        logger.info(f"Cleared {count} transcription cache files from {self.cache_dir}")
 
 class TranscriptionCacheService:
     """
@@ -132,6 +153,18 @@ class TranscriptionCacheService:
             cache: Cache implementation to use
         """
         self.cache = cache
+        
+    def clear_all_cache(self) -> None:
+        """
+        Clear all cached transcriptions
+        
+        Returns:
+            None
+        """
+        if hasattr(self.cache, 'clear_all'):
+            self.cache.clear_all()
+        else:
+            logger.warning("The cache provider does not support clearing all cache")
     
     def get_cached_transcription(self, audio_file_path: str, options: Dict[str, Any] = None) -> Optional[str]:
         """
