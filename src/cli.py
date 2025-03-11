@@ -92,12 +92,11 @@ def transcribe_media(file_path, api_key, drive_url, optimize, output, template, 
         logger.error(f"Unsupported file format. Supported formats: {', '.join(supported_formats)}")
         sys.exit(1)
     try:
-        if not api_key:
-            logger.error("OpenAI API key not provided")
-            sys.exit(1)
-            
         # Configurar el proveedor de IA
-        if provider.lower() == 'openai' and api_key:
+        if provider.lower() == 'openai':
+            if not api_key:
+                logger.error("OpenAI API key not provided")
+                sys.exit(1)
             os.environ["OPENAI_API_KEY"] = api_key
             if hasattr(openai, 'api_key'):
                 openai.api_key = api_key
