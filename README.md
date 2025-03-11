@@ -135,6 +135,18 @@ poetry run samuelize listen --duration 300
 poetry run samuelize version
 ```
 
+### Offline Mode (100% Local Processing)
+```bash
+# Process media files completely offline without any external API calls
+poetry run samuelize offline path/to/file.mp4 --whisper-size base --text-model facebook/bart-large-cnn
+```
+
+### Using Local Models with Standard Commands
+```bash
+# Use local models with the standard media command
+poetry run samuelize media path/to/file.mp4 --local --whisper-size base
+```
+
 ---
 
 ## Project Structure

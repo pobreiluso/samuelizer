@@ -18,6 +18,19 @@ PROVIDERS = {
         ],
         "default_transcription_model": "whisper-1",
         "default_analysis_model": "gpt-4"
+    },
+    "local": {
+        "name": "Local Models",
+        "description": "Modelos locales usando Whisper y Transformers",
+        "env_var": None,  # No requiere API key
+        "transcription_models": ["tiny", "base", "small", "medium", "large"],
+        "analysis_models": [
+            "facebook/bart-large-cnn", 
+            "google/flan-t5-base", 
+            "google/flan-t5-large"
+        ],
+        "default_transcription_model": "base",
+        "default_analysis_model": "facebook/bart-large-cnn"
     }
 }
 
