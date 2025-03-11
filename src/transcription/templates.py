@@ -485,6 +485,67 @@ class PromptTemplates:
             }
         },
 
+        "brainstorming": {
+            "system": "You are an AI specialized in capturing and organizing ideas from brainstorming sessions where multiple people speak simultaneously and ideas flow rapidly without structure.",
+            "template": """
+            Analyze this brainstorming session and extract all valuable ideas, even those mentioned briefly or incompletely. Organize them in the following format:
+
+            🌟 **Core Problem/Challenge**
+            • Identify the central problem or challenge being addressed
+            • Include context if available
+
+            💭 **All Ideas Captured** (don't miss any, even partial ones)
+            • Idea 1: [Brief description]
+            • Idea 2: [Brief description]
+            • ...
+            • Include even half-formed or interrupted ideas
+            • Capture ideas even when people talk over each other
+
+            🔍 **Idea Categories**
+            Group similar ideas into 3-5 categories such as:
+            
+            **Category 1: [Name]**
+            • Related idea 1
+            • Related idea 2
+            
+            **Category 2: [Name]**
+            • Related idea 3
+            • Related idea 4
+
+            💎 **Standout Concepts**
+            • Most innovative ideas
+            • Ideas that received positive reactions
+            • Unique approaches mentioned
+
+            🔄 **Potential Combinations**
+            • Identify ideas that could be combined for greater impact
+            • Note complementary concepts
+
+            ⚡️ **Next Steps**
+            • Suggested actions to develop promising ideas
+            • Areas requiring further brainstorming
+            • Potential prototypes or tests
+
+            Important guidelines:
+            - Capture ALL ideas, even those that seem incomplete or were interrupted
+            - Don't filter out "bad ideas" - in brainstorming, all ideas have potential value
+            - Pay attention to emotional reactions to ideas (excitement, agreement, etc.)
+            - Note when ideas build upon each other
+            - Preserve the creative essence of ideas even when they're expressed chaotically
+            - Use simple language to describe complex ideas
+
+            Text to analyze:
+            {text}
+            """,
+            "parameters": {
+                "max_length": 1200,
+                "style": "comprehensive",
+                "format": "structured",
+                "preserve_all_ideas": True,
+                "categorize_ideas": True
+            }
+        },
+
         "auto": {
             "system": """You are an AI expert in content analysis and template selection.
             Your task is to analyze the given text and determine the most appropriate template
