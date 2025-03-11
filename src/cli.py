@@ -464,6 +464,35 @@ def list_providers():
             default = " (default)" if model == provider_info.get('default_analysis_model') else ""
             click.echo(f"    - {model}{default}")
 
+@cli.command('clear-cache')
+@click.option('--confirm', is_flag=True, help='Skip confirmation prompt')
+def clear_cache(confirm):
+    """
+    Clear all cached transcriptions.
+    
+    This command removes all cached transcriptions to ensure fresh results
+    on subsequent transcription requests.
+    """
+    if not confirm:
+        if not click.confirm('¿Estás seguro de que quieres borrar toda la caché de transcripciones?'):
+            click.echo("Operación cancelada.")
+            return
+    
+    try:
+        from src.transcription.cache import FileCache, TranscriptionCacheService
+        
+        # Crear el servicio de caché
+        file_cache = FileCache()
+        cache_service = TranscriptionCacheService(file_cache)
+        
+        # Limpiar toda la caché
+        cache_service.clear_all_cache()
+        
+        click.echo("Caché de transcripciones borrada correctamente.")
+    except Exception as e:
+        logger.error(f"Error al limpiar la caché: {e}")
+        sys.exit(1)
+
 
 if __name__ == '__main__':
     try:
