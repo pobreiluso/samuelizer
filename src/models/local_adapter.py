@@ -1,10 +1,17 @@
 import os
 import logging
 from typing import List, Dict, BinaryIO, Optional, Any
-import whisper  # Para transcripción local
 import torch
 from transformers import pipeline  # Para análisis de texto local
 from src.interfaces import AIModelProviderInterface, TranscriptionModelInterface, TextAnalysisModelInterface
+
+# Importar whisper con manejo de errores
+try:
+    import whisper
+except ImportError:
+    logging.error("No se pudo importar el módulo 'whisper'. Asegúrate de instalar openai-whisper correctamente.")
+    logging.error("Ejecuta: poetry add --no-interaction openai-whisper")
+    whisper = None
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +64,9 @@ class LocalProvider(AIModelProviderInterface, TranscriptionModelInterface, TextA
         """
         Carga el modelo Whisper bajo demanda
         """
+        if whisper is None:
+            raise ImportError("El módulo 'whisper' no está disponible. Instala openai-whisper con 'poetry add openai-whisper'")
+            
         if self.whisper_model is None:
             logger.info(f"Cargando modelo Whisper '{self.whisper_model_size}'...")
             self.whisper_model = whisper.load_model(self.whisper_model_size, device=self.device)
