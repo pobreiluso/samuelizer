@@ -137,14 +137,23 @@ poetry run samuelize version
 
 ### Offline Mode (100% Local Processing)
 ```bash
-# Process media files completely offline without any external API calls
-poetry run samuelize media path/to/file.mp4 --offline --whisper-size base --text-model facebook/bart-large-cnn
+# Process any command completely offline without any external API calls
+poetry run samuelize --offline media path/to/file.mp4 --whisper-size base --text-model facebook/bart-large-cnn
+
+# Process text analysis offline
+poetry run samuelize --local text "Text to analyze" --template quick
+
+# Process Slack messages offline
+poetry run samuelize --local slack CHANNEL_ID --start-date 2024-01-01
+
+# Record and analyze audio offline
+poetry run samuelize --local listen --duration 300
 ```
 
-### Using Local Models with Standard Commands
+### Using Local Models with Specific Whisper Size
 ```bash
-# Use local models with the standard media command (same as --offline)
-poetry run samuelize media path/to/file.mp4 --local --whisper-size base
+# Specify the size of the Whisper model to use (tiny, base, small, medium, large)
+poetry run samuelize --local --whisper-size medium media path/to/file.mp4
 ```
 
 ---
