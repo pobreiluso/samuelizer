@@ -2,6 +2,7 @@ import os
 import subprocess
 import logging
 import json
+import time
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
@@ -125,7 +126,7 @@ class AudioOptimizer:
         return output_file
 
     @staticmethod
-    def optimize_audio(input_file: str, output_file: str, target_bitrate: str = '128k',
+    def optimize_audio(input_file: str, output_file: str = None, target_bitrate: str = '128k',
                       remove_silences: bool = True, max_size_mb: int = 100) -> str:
         """
         Optimiza un archivo de audio para procesamiento con Whisper.
@@ -147,6 +148,12 @@ class AudioOptimizer:
             subprocess.CalledProcessError: Si el comando ffmpeg falla
             OSError: Si las operaciones de archivo fallan
         """
+        # Si output_file es None o es igual a input_file, generar un nombre de archivo único
+        if output_file is None or output_file == input_file:
+            base_dir = os.path.dirname(input_file) or '.'
+            base_name = os.path.splitext(os.path.basename(input_file))[0]
+            output_file = os.path.join(base_dir, f"{base_name}_optimized_{int(time.time())}.mp3")
+            
         logger.info(f"Optimizando archivo de audio: {input_file}...")
         
         with tqdm(total=100, desc="Optimizando audio", unit="%") as pbar:
