@@ -33,8 +33,18 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 @click.group()
-def cli():
+@click.option('--local', is_flag=True, help='Use local models instead of API-based ones')
+@click.option('--offline', is_flag=True, help='Alias for --local, process completely offline')
+@click.option('--whisper-size', default='base', help='Whisper model size when using --local/--offline')
+@click.option('--text-model', default='facebook/bart-large-cnn', help='Text model when using --local/--offline')
+@click.pass_context
+def cli(ctx, local, offline, whisper_size, text_model):
     """Samuelizer - AI-powered summarization tool."""
+    # Guardar las opciones en el contexto para que estén disponibles en todos los comandos
+    ctx.ensure_object(dict)
+    ctx.obj['local'] = local or offline
+    ctx.obj['whisper_size'] = whisper_size
+    ctx.obj['text_model'] = text_model
     pass
 
 @cli.command('media')
