@@ -101,9 +101,11 @@ class ModelProviderFactory:
         Returns:
             Dict[str, Type]: Diccionario de proveedores registrados
         """
-        # Importar el adaptador de OpenAI si no hay proveedores registrados
+        # Importar los adaptadores si no hay proveedores registrados
         if not cls._providers:
             from src.models.openai_adapter import OpenAIProvider
+            from src.models.local_adapter import LocalProvider
             cls.register_provider("openai", OpenAIProvider)
+            cls.register_provider("local", LocalProvider)
             
         return cls._providers.copy()

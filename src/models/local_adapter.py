@@ -13,6 +13,13 @@ except ImportError:
     logging.error("Ejecuta: poetry add --no-interaction openai-whisper")
     whisper = None
 
+# Verificar que transformers esté instalado
+try:
+    from transformers import pipeline
+except ImportError:
+    logging.error("No se pudo importar el módulo 'transformers'. Asegúrate de instalarlo correctamente.")
+    logging.error("Ejecuta: poetry add --no-interaction transformers sentencepiece")
+
 logger = logging.getLogger(__name__)
 
 class LocalProvider(AIModelProviderInterface, TranscriptionModelInterface, TextAnalysisModelInterface):
@@ -131,8 +138,12 @@ class LocalProvider(AIModelProviderInterface, TranscriptionModelInterface, TextA
         Returns:
             str: Resultado del análisis
         """
-        self.text_model_id = model_id
-        self._load_text_model()
+        try:
+            self.text_model_id = model_id
+            self._load_text_model()
+        except Exception as e:
+            logger.error(f"Error al cargar el modelo de texto: {e}")
+            return f"Error al cargar el modelo de texto local '{model_id}'. Asegúrate de tener instaladas las dependencias necesarias: transformers, torch, sentencepiece. Error: {str(e)}"
         
         # Preparar el texto para análisis
         text = ""

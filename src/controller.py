@@ -67,13 +67,13 @@ def run_analysis(transcription: str, provider_name: str = "openai",
     # Crear el cliente de análisis con el proveedor seleccionado
     analysis_client = AnalysisClient(
         provider_name=provider_name,
-        api_key=api_key
+        api_key=api_key,
+        model_id=model_id
     )
     
     analyzer = MeetingAnalyzer(
         transcription=transcription,
-        analysis_client=analysis_client,
-        model_id=model_id
+        analysis_client=analysis_client
     )
     
     meeting_info = {

@@ -177,7 +177,18 @@ def transcribe_media(ctx, file_path, api_key, drive_url, optimize, output, templ
             logger.error(f"Error during transcription: {str(e)}")
             raise
         
-        analyzer = MeetingAnalyzer(transcription)
+        # Crear el cliente de análisis con el proveedor seleccionado
+        from src.transcription.meeting_analyzer import AnalysisClient
+        analysis_client = AnalysisClient(
+            provider_name=provider,
+            api_key=api_key,
+            model_id=model
+        )
+        
+        analyzer = MeetingAnalyzer(
+            transcription=transcription,
+            analysis_client=analysis_client
+        )
         
         if template == 'all':
             meeting_info = {}
