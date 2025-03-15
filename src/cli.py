@@ -283,8 +283,7 @@ def summarize_text_command(ctx, text, api_key, output, template, params, provide
         
         analyzer = MeetingAnalyzer(
             transcription=text,
-            analysis_client=analysis_client,
-            model_id=model
+            analysis_client=analysis_client
         )
         
         if template == 'all':
@@ -442,8 +441,7 @@ def analyze_slack_messages(ctx, channel_id, start_date, end_date, output_dir, to
         # Analyze the messages
         analyzer = MeetingAnalyzer(
             transcription=transcription_text,
-            analysis_client=analysis_client,
-            model_id=model
+            analysis_client=analysis_client
         )
         
         if template == 'all':
