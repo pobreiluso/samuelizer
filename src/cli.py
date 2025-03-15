@@ -278,7 +278,8 @@ def summarize_text_command(ctx, text, api_key, output, template, params, provide
         from src.transcription.meeting_analyzer import AnalysisClient
         analysis_client = AnalysisClient(
             provider_name=provider,
-            api_key=api_key
+            api_key=api_key,
+            model_id=model
         )
         
         analyzer = MeetingAnalyzer(
