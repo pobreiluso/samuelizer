@@ -17,7 +17,8 @@ class AnalysisClient:
     Cliente de análisis que utiliza el proveedor de modelos configurado.
     """
     def __init__(self, provider: Optional[TextAnalysisModelInterface] = None, 
-                 provider_name: str = "openai", api_key: Optional[str] = None):
+                 provider_name: str = "openai", api_key: Optional[str] = None,
+                 model_id: str = "gpt-4"):
         """
         Inicializa el cliente de análisis
         
@@ -25,6 +26,7 @@ class AnalysisClient:
             provider: Proveedor de modelos preconfigurado (opcional)
             provider_name: Nombre del proveedor a utilizar si no se proporciona uno
             api_key: Clave API para el proveedor (opcional)
+            model_id: Identificador del modelo a utilizar (opcional)
         """
         self.provider = provider
         if not self.provider:
@@ -32,20 +34,23 @@ class AnalysisClient:
                 provider_name, api_key=api_key
             )
         self.provider_name = provider_name
+        self.model_id = model_id
 
-    def analyze(self, messages: List[Dict[str, str]], model_id: str = "gpt-4", **kwargs) -> str:
+    def analyze(self, messages: List[Dict[str, str]], model_id: str = None, **kwargs) -> str:
         """
         Analiza un texto utilizando el proveedor configurado
         
         Args:
             messages: Lista de mensajes en formato compatible con el modelo
-            model_id: Identificador del modelo a utilizar
+            model_id: Identificador del modelo a utilizar (opcional, usa self.model_id si no se proporciona)
             **kwargs: Parámetros adicionales para el modelo
             
         Returns:
             str: Resultado del análisis
         """
-        return self.provider.analyze(messages, model_id, **kwargs)
+        # Usar el modelo_id pasado como parámetro o el almacenado en la instancia
+        model_to_use = model_id or self.model_id
+        return self.provider.analyze(messages, model_to_use, **kwargs)
 
 class TemplateSelector:
     """
@@ -78,7 +83,7 @@ class MeetingAnalyzer:
     Analyzes meeting transcriptions.
     """
     def __init__(self, transcription: str, analysis_client=None, prompt_templates=None, 
-                model_id: str = "gpt-4", provider_name: str = "openai", api_key: str = None):
+                provider_name: str = "openai", api_key: str = None, model_id: str = "gpt-4"):
         self.text_preprocessor = TextPreprocessor()
         self.transcription = self.text_preprocessor.prepare_text(transcription)
         
@@ -86,17 +91,17 @@ class MeetingAnalyzer:
         if analysis_client is None:
             self.analysis_client = AnalysisClient(
                 provider_name=provider_name,
-                api_key=api_key
+                api_key=api_key,
+                model_id=model_id
             )
         else:
             self.analysis_client = analysis_client
             
-        self.model_id = model_id
         self.prompt_templates = prompt_templates or PromptTemplates()
         self.template_selector = TemplateSelector(
             self.prompt_templates, 
             self.analysis_client,
-            model_id=self.model_id
+            model_id=self.analysis_client.model_id
         )
 
     def analyze(self, template_name: str = "auto", **kwargs) -> str:
@@ -109,7 +114,7 @@ class MeetingAnalyzer:
                 {"role": "system", "content": template["system"]},
                 {"role": "user", "content": template["template"].format(text=self.transcription)}
             ]
-            return self.analysis_client.analyze(messages, model_id=self.model_id, **kwargs)
+            return self.analysis_client.analyze(messages, **kwargs)
         except openai.AuthenticationError as e:
             logger.error(f"Error with template '{template_name}': {e}")
             raise AnalysisError(f"Authentication failed: {e}") from e
