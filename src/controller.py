@@ -5,6 +5,10 @@ from src.transcription.meeting_transcription import AudioTranscriptionService, T
 from src.transcription.meeting_analyzer import MeetingAnalyzer, DocumentManager, AnalysisClient
 from src.slack.download_slack_channel import SlackDownloader, SlackConfig
 from src.slack.http_client import RequestsClient
+from src.slack.pagination import SlackPaginator
+from src.slack.user_cache import SlackUserCache
+from src.slack.filters import SlackMessageFilter
+from src.slack.exceptions import SlackAPIError, SlackRateLimitError
 from src.exporters.json_exporter import JSONExporter
 from src.config.config import Config
 from src.transcription.cache import FileCache, TranscriptionCacheService

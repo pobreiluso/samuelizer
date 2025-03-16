@@ -22,7 +22,9 @@
 - **Slack Analysis:**  
   - Download and process Slack messages (from channels or threads).  
   - Intelligent replacement of user mentions for improved readability.  
-  - Filter messages by date range.
+  - Advanced filtering options (by date range, user, threads, reactions).
+  - Robust pagination and rate limit handling.
+  - User information caching for improved performance.
 
 - **Audio/Video Transcription:**  
   - Extract and optimize audio from various media formats (MP4, AVI, MKV, MP3, WAV, etc.).  
@@ -121,7 +123,20 @@ poetry run samuelize text "Text to analyze" --template quick
 
 ### Slack Message Analysis
 ```bash
+# Basic channel analysis
 poetry run samuelize slack CHANNEL_ID --start-date 2024-01-01 --end-date 2024-02-01
+
+# Thread analysis
+poetry run samuelize slack CHANNEL_ID --thread-ts 1234567890.123456
+
+# Filter by user
+poetry run samuelize slack CHANNEL_ID --user-id U01234ABC
+
+# Only messages with thread replies
+poetry run samuelize slack CHANNEL_ID --only-threads
+
+# Only messages with reactions
+poetry run samuelize slack CHANNEL_ID --with-reactions
 ```
 
 ### Real-Time Recording and Analysis

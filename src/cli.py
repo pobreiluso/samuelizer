@@ -16,6 +16,10 @@ from src.transcription.meeting_minutes import (
 )
 from src.slack.download_slack_channel import SlackDownloader, SlackConfig
 from src.slack.http_client import RequestsClient
+from src.slack.pagination import SlackPaginator
+from src.slack.user_cache import SlackUserCache
+from src.slack.filters import SlackMessageFilter
+from src.slack.exceptions import SlackAPIError, SlackRateLimitError
 from src.exporters.json_exporter import JSONExporter
 from src.transcription.exceptions import MeetingMinutesError
 from src.utils.audio_extractor import AudioExtractor
@@ -332,13 +336,18 @@ def summarize_text_command(ctx, text, api_key, output, template, params, provide
 @click.option('--end-date', type=click.DateTime(formats=["%Y-%m-%d"]), help='End date in YYYY-MM-DD format')
 @click.option('--output-dir', default='slack_exports', help='Directory to save messages')
 @click.option('--token', help='Slack token. Can also use SLACK_TOKEN env var', default=lambda: os.environ.get('SLACK_TOKEN', None))
+@click.option('--thread-ts', help='Thread timestamp to fetch replies from a specific thread')
+@click.option('--user-id', help='Filter messages by user ID')
+@click.option('--only-threads', is_flag=True, help='Only fetch messages that have replies')
+@click.option('--with-reactions', is_flag=True, help='Only fetch messages that have reactions')
 @click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
 @click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
 @click.option('--template', default='summary', help='Analysis template to use (summary, executive, quick)')
 @click.option('--provider', default='openai', help='AI provider to use (e.g., openai, local)')
 @click.option('--model', default='gpt-4', help='Model ID to use for analysis')
 @click.pass_context
-def analyze_slack_messages(ctx, channel_id, start_date, end_date, output_dir, token, api_key, output, template, provider, model):
+def analyze_slack_messages(ctx, channel_id, start_date, end_date, output_dir, token, api_key, output, template, provider, model, 
+                          thread_ts, user_id, only_threads, with_reactions):
     # Obtener las opciones globales del contexto
     local = ctx.obj.get('local', False)
     text_model = ctx.obj.get('text_model', 'facebook/bart-large-cnn')
@@ -387,20 +396,61 @@ def analyze_slack_messages(ctx, channel_id, start_date, end_date, output_dir, to
         
         # Create services with dependency injection
         http_client = RequestsClient()
-        downloader = SlackDownloader(slack_config, http_client)
+        user_cache = SlackUserCache()
+        downloader = SlackDownloader(slack_config, http_client, user_cache)
         exporter = JSONExporter()
         
-        # Download messages
-        messages = downloader.fetch_messages()
+        try:
+            # Download messages
+            if thread_ts:
+                messages = downloader.fetch_thread_messages(thread_ts)
+                logging.info(f"Downloaded {len(messages)} messages from thread {thread_ts}")
+            else:
+                messages = downloader.fetch_messages()
+                logging.info(f"Downloaded {len(messages)} messages from channel {channel_id}")
+            
+            # Apply filters if specified
+            if user_id:
+                messages = SlackMessageFilter.by_user(messages, user_id)
+                logging.info(f"Filtered to {len(messages)} messages from user {user_id}")
+            
+            if only_threads:
+                messages = SlackMessageFilter.by_has_replies(messages)
+                logging.info(f"Filtered to {len(messages)} messages with thread replies")
+            
+            if with_reactions:
+                messages = SlackMessageFilter.by_has_reactions(messages)
+                logging.info(f"Filtered to {len(messages)} messages with reactions")
+            
+            # Apply date filters if specified
+            if start_date or end_date:
+                messages = SlackMessageFilter.by_date_range(messages, start_date, end_date)
         
-        # Export messages to JSON
-        output_file = exporter.export_messages(
-            messages,
-            slack_config.channel_id,
-            slack_config.output_dir,
-            start_date=slack_config.start_date,
-            end_date=slack_config.end_date
-        )
+            # Export messages to JSON
+            output_file = exporter.export_messages(
+                messages,
+                slack_config.channel_id,
+                slack_config.output_dir,
+                start_date=slack_config.start_date,
+                end_date=slack_config.end_date
+            )
+        except SlackRateLimitError as e:
+            logging.error(f"Rate limit exceeded: {e}")
+            logging.info(f"Waiting {e.retry_after} seconds before retrying...")
+            time.sleep(e.retry_after or 60)
+            messages = downloader.fetch_messages()
+            
+            # Export messages to JSON
+            output_file = exporter.export_messages(
+                messages,
+                slack_config.channel_id,
+                slack_config.output_dir,
+                start_date=slack_config.start_date,
+                end_date=slack_config.end_date
+            )
+        except SlackAPIError as e:
+            logging.error(f"Slack API error: {e}")
+            sys.exit(1)
         
         # Find the latest JSON file
         json_files = glob.glob(os.path.join(output_dir, f"slack_messages_{channel_id}*.json"))
