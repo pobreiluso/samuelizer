@@ -155,6 +155,15 @@ poetry run samuelize slack-channels --include-archived
 
 # Guardar resultados en un archivo
 poetry run samuelize slack-channels --output canales_slack.txt
+
+# Generar resumen global de todos los canales en un rango de fechas
+poetry run samuelize slack-summary --start-date 2024-01-01 --end-date 2024-01-31 --output resumen_enero.docx
+
+# Analizar solo canales públicos
+poetry run samuelize slack-summary --start-date 2024-01-01 --end-date 2024-01-31 --public-only
+
+# Limitar el análisis a los 10 canales más activos
+poetry run samuelize slack-summary --start-date 2024-01-01 --end-date 2024-01-31 --max-channels 10
 ```
 
 ### Real-Time Recording and Analysis

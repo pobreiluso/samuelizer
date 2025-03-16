@@ -745,6 +745,295 @@ def list_slack_channels(token, include_private, include_archived, output):
         sys.exit(1)
 
 
+@cli.command('slack-summary')
+@click.option('--start-date', type=click.DateTime(formats=["%Y-%m-%d"]), required=True, help='Start date in YYYY-MM-DD format')
+@click.option('--end-date', type=click.DateTime(formats=["%Y-%m-%d"]), required=True, help='End date in YYYY-MM-DD format')
+@click.option('--token', help='Slack token. Can also use SLACK_TOKEN env var', default=lambda: os.environ.get('SLACK_TOKEN', None))
+@click.option('--output-dir', default='slack_exports', help='Directory to save messages')
+@click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
+@click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
+@click.option('--template', default='global_summary', help='Analysis template to use')
+@click.option('--provider', default='openai', help='AI provider to use (e.g., openai, local)')
+@click.option('--model', default='gpt-4', help='Model ID to use for analysis')
+@click.option('--max-channels', default=0, type=int, help='Maximum number of channels to analyze (0 for all)')
+@click.option('--min-messages', default=5, type=int, help='Minimum number of messages in a channel to include it')
+@click.option('--include-private/--public-only', default=True, help='Include private channels and DMs')
+@click.pass_context
+def global_slack_summary(ctx, start_date, end_date, token, output_dir, api_key, output, template, provider, model, 
+                        max_channels, min_messages, include_private):
+    """
+    Generate a global summary of all Slack activity in a date range.
+    
+    This command will:
+    1. List all accessible Slack channels
+    2. Download messages from all channels in the specified date range
+    3. Analyze messages across channels to identify:
+       - Important topics and discussions
+       - Cross-channel conversations and interdependencies
+       - Key participants and their contributions
+       - Action items and decisions made
+    4. Generate a comprehensive summary
+    
+    Required:
+    - SLACK_TOKEN or --token: Slack Bot User OAuth Token
+    - OPENAI_API_KEY or --api_key: OpenAI API key
+    - --start-date: Beginning of date range (YYYY-MM-DD)
+    - --end-date: End of date range (YYYY-MM-DD)
+    """
+    # Obtener las opciones globales del contexto
+    local = ctx.obj.get('local', False)
+    text_model = ctx.obj.get('text_model', 'facebook/bart-large-cnn')
+    
+    # Si se especifica --local, usar el proveedor local
+    if local:
+        provider = "local"
+        model = text_model
+        # No se necesita API key para modelos locales
+        api_key = None
+        logger.info("Usando modelos locales para procesamiento (modo offline)")
+    elif not api_key and provider == "openai":
+        api_key = click.prompt('OpenAI API key', hide_input=True)
+        
+    if not token:
+        token = click.prompt('Slack Token', hide_input=True)
+    
+    try:
+        # Importar las clases necesarias
+        from src.slack.channel_lister import SlackChannelLister
+        from src.slack.http_client import RequestsClient
+        from src.slack.download_slack_channel import SlackDownloader, SlackConfig
+        from src.slack.filters import SlackMessageFilter
+        from src.exporters.json_exporter import JSONExporter
+        from src.transcription.meeting_analyzer import AnalysisClient, MeetingAnalyzer
+        from src.transcription.templates import PromptTemplates
+        
+        # Configurar el proveedor de IA
+        if provider.lower() == 'openai':
+            if not api_key:
+                logger.error("OpenAI API key not provided")
+                sys.exit(1)
+            os.environ["OPENAI_API_KEY"] = api_key
+            if hasattr(openai, 'api_key'):
+                openai.api_key = api_key
+        
+        # Crear el cliente HTTP
+        http_client = RequestsClient()
+        
+        # Paso 1: Listar todos los canales accesibles
+        logger.info("Obteniendo lista de canales de Slack...")
+        channel_lister = SlackChannelLister(token, http_client)
+        channels = channel_lister.list_channels(include_private=include_private, include_archived=False)
+        
+        # Enriquecer la información de los canales
+        enriched_channels = channel_lister.get_channel_details(channels)
+        
+        # Filtrar solo canales donde el bot es miembro
+        member_channels = [c for c in enriched_channels if c.get('is_member', False)]
+        
+        # Limitar el número de canales si se especificó
+        if max_channels > 0 and len(member_channels) > max_channels:
+            logger.info(f"Limitando análisis a {max_channels} canales (de {len(member_channels)} disponibles)")
+            member_channels = member_channels[:max_channels]
+        
+        logger.info(f"Analizando {len(member_channels)} canales en el rango de fechas: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
+        
+        # Crear directorio de salida si no existe
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Paso 2: Descargar mensajes de todos los canales en el rango de fechas
+        all_messages = []
+        channel_messages = {}
+        exporter = JSONExporter()
+        
+        with click.progressbar(member_channels, label='Descargando mensajes de canales') as channels_bar:
+            for channel in channels_bar:
+                channel_id = channel['id']
+                channel_name = channel['name']
+                
+                # Configuración para este canal
+                slack_config = SlackConfig(
+                    token=token,
+                    channel_id=channel_id,
+                    start_date=start_date,
+                    end_date=end_date,
+                    output_dir=output_dir
+                )
+                
+                # Crear el descargador
+                downloader = SlackDownloader(slack_config, http_client)
+                
+                try:
+                    # Descargar mensajes
+                    messages = downloader.fetch_messages()
+                    
+                    # Filtrar por fecha
+                    messages = SlackMessageFilter.by_date_range(messages, start_date, end_date)
+                    
+                    # Solo incluir canales con suficientes mensajes
+                    if len(messages) >= min_messages:
+                        # Añadir información del canal a cada mensaje
+                        for msg in messages:
+                            msg['_channel_id'] = channel_id
+                            msg['_channel_name'] = channel_name
+                        
+                        # Guardar mensajes
+                        all_messages.extend(messages)
+                        channel_messages[channel_id] = {
+                            'name': channel_name,
+                            'message_count': len(messages),
+                            'messages': messages
+                        }
+                        
+                        # Exportar mensajes de este canal
+                        exporter.export_messages(
+                            messages,
+                            channel_id,
+                            output_dir,
+                            start_date=start_date,
+                            end_date=end_date
+                        )
+                        
+                        logger.info(f"Canal {channel_name} ({channel_id}): {len(messages)} mensajes")
+                    else:
+                        logger.info(f"Canal {channel_name} ({channel_id}): solo {len(messages)} mensajes (mínimo: {min_messages})")
+                        
+                except Exception as e:
+                    logger.warning(f"Error al descargar mensajes del canal {channel_name} ({channel_id}): {str(e)}")
+        
+        if not all_messages:
+            logger.error("No se encontraron mensajes en el rango de fechas especificado.")
+            sys.exit(1)
+            
+        logger.info(f"Total de mensajes descargados: {len(all_messages)}")
+        
+        # Paso 3: Preparar datos para análisis
+        
+        # Ordenar todos los mensajes por timestamp
+        all_messages.sort(key=lambda x: float(x.get('ts', 0)))
+        
+        # Exportar todos los mensajes juntos
+        combined_output = os.path.join(output_dir, f"slack_global_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.json")
+        with open(combined_output, 'w', encoding='utf-8') as f:
+            json.dump({
+                'start_date': start_date.strftime('%Y-%m-%d'),
+                'end_date': end_date.strftime('%Y-%m-%d'),
+                'channel_count': len(channel_messages),
+                'message_count': len(all_messages),
+                'channels': channel_messages
+            }, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"Datos combinados guardados en: {combined_output}")
+        
+        # Paso 4: Analizar mensajes
+        
+        # Crear cliente de análisis
+        analysis_client = AnalysisClient(
+            provider_name=provider,
+            api_key=api_key,
+            model_id=model
+        )
+        
+        # Registrar plantilla personalizada para resumen global
+        templates = PromptTemplates()
+        if not hasattr(templates, 'templates') or 'global_summary' not in templates.templates:
+            templates.add_custom_template('global_summary', {
+                'system': """Eres un asistente especializado en analizar conversaciones de Slack y generar resúmenes ejecutivos detallados. 
+                Tu tarea es identificar temas importantes, patrones de comunicación, interdependencias entre canales y extraer información clave.""",
+                'template': """
+                Analiza las siguientes conversaciones de Slack que ocurrieron entre {start_date} y {end_date} en {channel_count} canales diferentes.
+                
+                Tu objetivo es crear un resumen global que:
+                1. Identifique los temas principales discutidos en todos los canales
+                2. Destaque las conversaciones más importantes y sus conclusiones
+                3. Identifique patrones de comunicación entre canales (temas que aparecen en múltiples canales)
+                4. Reconozca a los participantes clave y sus contribuciones principales
+                5. Extraiga decisiones importantes y elementos de acción
+                6. Identifique cualquier problema o desafío recurrente
+                
+                Organiza tu resumen en estas secciones:
+                - RESUMEN EJECUTIVO: Una visión general concisa de toda la actividad
+                - TEMAS PRINCIPALES: Los temas más discutidos y su importancia
+                - DECISIONES CLAVE: Decisiones importantes tomadas durante este período
+                - ELEMENTOS DE ACCIÓN: Tareas y responsabilidades asignadas
+                - PROBLEMAS Y DESAFÍOS: Problemas identificados que requieren atención
+                - PARTICIPANTES DESTACADOS: Personas que tuvieron contribuciones significativas
+                - ANÁLISIS DE CANALES: Breve resumen de la actividad en cada canal principal
+                
+                Conversaciones a analizar:
+                
+                {text}
+                """,
+                'parameters': {
+                    'max_length': 2000,
+                    'style': 'executive',
+                    'format': 'structured'
+                }
+            })
+        
+        # Preparar texto para análisis
+        # Limitamos a un número manejable de mensajes para evitar exceder límites de tokens
+        max_messages_for_analysis = 1000
+        if len(all_messages) > max_messages_for_analysis:
+            logger.warning(f"Limitando análisis a {max_messages_for_analysis} mensajes (de {len(all_messages)} totales)")
+            # Seleccionar mensajes distribuidos uniformemente
+            step = len(all_messages) // max_messages_for_analysis
+            selected_messages = all_messages[::step]
+        else:
+            selected_messages = all_messages
+        
+        # Formatear mensajes para análisis
+        formatted_messages = []
+        for msg in selected_messages:
+            channel_name = msg.get('_channel_name', 'desconocido')
+            user_name = msg.get('user_info', msg.get('user', 'desconocido'))
+            text = msg.get('text', '')
+            ts = float(msg.get('ts', 0))
+            date_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
+            
+            formatted_msg = f"[{date_str}] #{channel_name} - {user_name}: {text}"
+            formatted_messages.append(formatted_msg)
+        
+        analysis_text = "\n".join(formatted_messages)
+        
+        # Crear analizador
+        analyzer = MeetingAnalyzer(
+            transcription=analysis_text,
+            analysis_client=analysis_client
+        )
+        
+        # Realizar análisis con parámetros adicionales
+        template_params = {
+            'start_date': start_date.strftime('%Y-%m-%d'),
+            'end_date': end_date.strftime('%Y-%m-%d'),
+            'channel_count': len(channel_messages)
+        }
+        
+        logger.info("Generando resumen global...")
+        result = analyzer.analyze(template, **template_params)
+        
+        # Mostrar resultados
+        click.echo("\n=== Resumen Global de Slack ===")
+        click.echo(f"Período: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
+        click.echo(f"Canales analizados: {len(channel_messages)}")
+        click.echo(f"Total de mensajes: {len(all_messages)}")
+        click.echo("\n" + result)
+        
+        # Guardar resultados en DOCX si se solicitó
+        if output:
+            from src.transcription.meeting_minutes import DocumentManager
+            DocumentManager.save_to_docx({'global_summary': result}, output)
+            logger.info(f"Resumen guardado en: {output}")
+        
+    except KeyboardInterrupt:
+        logger.info("Proceso interrumpido por el usuario.")
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"Error inesperado: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        sys.exit(1)
+
+
 if __name__ == '__main__':
     try:
         cli(obj={})
