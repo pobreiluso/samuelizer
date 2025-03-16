@@ -46,6 +46,7 @@ class SlackChannelLister:
         public_channels = self._get_channels("conversations.list", {
             "types": "public_channel",
             "exclude_archived": not include_archived,
+            "member": True,  # Solo canales donde el bot es miembro
             "limit": 1000
         })
         all_channels.extend(public_channels)
@@ -56,6 +57,7 @@ class SlackChannelLister:
             private_channels = self._get_channels("conversations.list", {
                 "types": "private_channel",
                 "exclude_archived": not include_archived,
+                "member": True,  # Solo canales donde el bot es miembro
                 "limit": 1000
             })
             all_channels.extend(private_channels)
@@ -64,6 +66,7 @@ class SlackChannelLister:
             # También obtener mensajes directos (DMs)
             dms = self._get_channels("conversations.list", {
                 "types": "im",
+                "member": True,  # Solo DMs donde el bot es miembro
                 "limit": 1000
             })
             all_channels.extend(dms)
@@ -72,6 +75,7 @@ class SlackChannelLister:
             # Y grupos de mensajes directos (MPDMs)
             mpdms = self._get_channels("conversations.list", {
                 "types": "mpim",
+                "member": True,  # Solo MPDMs donde el bot es miembro
                 "limit": 1000
             })
             all_channels.extend(mpdms)
