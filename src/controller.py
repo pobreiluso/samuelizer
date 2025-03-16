@@ -9,6 +9,7 @@ from src.slack.pagination import SlackPaginator
 from src.slack.user_cache import SlackUserCache
 from src.slack.filters import SlackMessageFilter
 from src.slack.exceptions import SlackAPIError, SlackRateLimitError
+from src.slack.utils import parse_slack_link
 from src.exporters.json_exporter import JSONExporter
 from src.config.config import Config
 from src.transcription.cache import FileCache, TranscriptionCacheService

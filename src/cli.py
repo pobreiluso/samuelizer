@@ -331,7 +331,7 @@ def summarize_text_command(ctx, text, api_key, output, template, params, provide
         sys.exit(1)
 
 @cli.command('slack')
-@click.argument('channel_id')
+@click.argument('channel_id_or_link')
 @click.option('--start-date', type=click.DateTime(formats=["%Y-%m-%d"]), help='Start date in YYYY-MM-DD format')
 @click.option('--end-date', type=click.DateTime(formats=["%Y-%m-%d"]), help='End date in YYYY-MM-DD format')
 @click.option('--output-dir', default='slack_exports', help='Directory to save messages')
@@ -346,7 +346,7 @@ def summarize_text_command(ctx, text, api_key, output, template, params, provide
 @click.option('--provider', default='openai', help='AI provider to use (e.g., openai, local)')
 @click.option('--model', default='gpt-4', help='Model ID to use for analysis')
 @click.pass_context
-def analyze_slack_messages(ctx, channel_id, start_date, end_date, output_dir, token, api_key, output, template, provider, model, 
+def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output_dir, token, api_key, output, template, provider, model, 
                           thread_ts, user_id, only_threads, with_reactions):
     # Obtener las opciones globales del contexto
     local = ctx.obj.get('local', False)
@@ -362,14 +362,14 @@ def analyze_slack_messages(ctx, channel_id, start_date, end_date, output_dir, to
     elif not api_key and provider == "openai":
         api_key = click.prompt('OpenAI API key', hide_input=True)
     """
-    Analyze and summarize a Slack channel.
+    Analyze and summarize a Slack channel or thread.
 
-    CHANNEL_ID: Slack channel ID (e.g., C01234567)
+    CHANNEL_ID_OR_LINK: Slack channel ID (e.g., C01234567) or a Slack message link
     
-    You can find the channel ID by:
-    1. Right-clicking on the channel in Slack
-    2. Select 'Copy link'
-    3. The ID is the last part of the URL
+    You can use:
+    1. Channel ID (e.g., C01234567)
+    2. Slack link to a channel (https://workspace.slack.com/archives/C01234567)
+    3. Slack link to a message or thread (https://workspace.slack.com/archives/C01234567/p1234567890123456)
     
     The channel messages will be:
     1. Downloaded and saved as JSON
@@ -385,6 +385,25 @@ def analyze_slack_messages(ctx, channel_id, start_date, end_date, output_dir, to
     - OPENAI_API_KEY or --api_key: OpenAI API key
     """
     try:
+        # Importar la función para parsear enlaces de Slack
+        from src.slack.utils import parse_slack_link
+        
+        # Verificar si es un enlace de Slack o un ID de canal
+        if channel_id_or_link.startswith('http'):
+            # Es un enlace de Slack, extraer el ID del canal y posiblemente el timestamp
+            channel_id, link_thread_ts = parse_slack_link(channel_id_or_link)
+            if not channel_id:
+                logging.error("Enlace de Slack inválido. No se pudo extraer el ID del canal.")
+                sys.exit(1)
+            
+            # Si se encontró un timestamp en el enlace y no se especificó --thread-ts, usarlo
+            if link_thread_ts and not thread_ts:
+                thread_ts = link_thread_ts
+                logging.info(f"Usando timestamp del enlace: {thread_ts}")
+        else:
+            # Es un ID de canal directamente
+            channel_id = channel_id_or_link
+        
         # Create configuration
         slack_config = SlackConfig(
             token=token,

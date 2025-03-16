@@ -123,13 +123,19 @@ poetry run samuelize text "Text to analyze" --template quick
 
 ### Slack Message Analysis
 ```bash
-# Basic channel analysis
+# Análisis básico de canal usando ID
 poetry run samuelize slack CHANNEL_ID --start-date 2024-01-01 --end-date 2024-02-01
 
-# Thread analysis
+# Análisis usando un enlace de Slack a un canal
+poetry run samuelize slack https://workspace.slack.com/archives/C01234567
+
+# Análisis usando un enlace de Slack a un mensaje específico o hilo
+poetry run samuelize slack https://workspace.slack.com/archives/C01234567/p1234567890123456
+
+# Análisis de un hilo específico usando --thread-ts
 poetry run samuelize slack CHANNEL_ID --thread-ts 1234567890.123456
 
-# Filter by user
+# Filtrar por usuario
 poetry run samuelize slack CHANNEL_ID --user-id U01234ABC
 
 # Only messages with thread replies
