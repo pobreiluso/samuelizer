@@ -280,6 +280,59 @@ class SlackDownloader(SlackServiceInterface):
                 raise RequestError(f"Failed to connect to Slack API: {str(e)}")
 
         return all_messages
+        
+    def fetch_thread_messages(self, thread_ts: str) -> List[Dict]:
+        """
+        Download all messages from a specific thread
+        
+        Args:
+            thread_ts: Thread timestamp to fetch replies from
+            
+        Returns:
+            List[Dict]: List of message dictionaries
+            
+        Raises:
+            RequestError: If there's an error in the HTTP request
+            SlackAPIError: If there's an error in the Slack API
+        """
+        url = f"{self.base_url}/conversations.replies"
+        params = {
+            "channel": self.config.channel_id,
+            "ts": thread_ts,
+            "limit": self.config.batch_size,
+        }
+
+        all_messages = []
+        page = 1
+
+        while True:
+            try:
+                logging.info(f"Downloading thread page {page}...")
+                response = self.http_client.get(url, headers=self.headers, params=params)
+                response.raise_for_status()
+                data = response.json()
+
+                if not data.get("ok"):
+                    error_msg = data.get("error", "Unknown error")
+                    raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+
+                messages = data["messages"]
+                processed_messages = [self.message_processor.process_message(msg) for msg in messages]
+                all_messages.extend(processed_messages)
+                logging.info(f"Downloaded {len(messages)} thread messages")
+
+                if "next_cursor" in data.get("response_metadata", {}):
+                    params["cursor"] = data["response_metadata"]["next_cursor"]
+                    page += 1
+                    time.sleep(self.config.rate_limit_delay)
+                else:
+                    break
+
+            except requests.exceptions.RequestException as e:
+                logging.error(f"Request error: {str(e)}")
+                raise RequestError(f"Failed to connect to Slack API: {str(e)}")
+
+        return all_messages
 
 def parse_date(date_str: str) -> datetime:
     """

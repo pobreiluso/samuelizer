@@ -415,8 +415,7 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
         
         # Create services with dependency injection
         http_client = RequestsClient()
-        user_cache = SlackUserCache()
-        downloader = SlackDownloader(slack_config, http_client, user_cache)
+        downloader = SlackDownloader(slack_config, http_client)
         exporter = JSONExporter()
         
         try:
