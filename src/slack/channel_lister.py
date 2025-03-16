@@ -54,32 +54,41 @@ class SlackChannelLister:
         
         # Luego obtener canales privados si se solicitan
         if include_private:
-            private_channels = self._get_channels("conversations.list", {
-                "types": "private_channel",
-                "exclude_archived": not include_archived,
-                "member": True,  # Solo canales donde el bot es miembro
-                "limit": 1000
-            })
-            all_channels.extend(private_channels)
-            logger.info(f"Encontrados {len(private_channels)} canales privados")
+            try:
+                private_channels = self._get_channels("conversations.list", {
+                    "types": "private_channel",
+                    "exclude_archived": not include_archived,
+                    "member": True,  # Solo canales donde el bot es miembro
+                    "limit": 1000
+                })
+                all_channels.extend(private_channels)
+                logger.info(f"Encontrados {len(private_channels)} canales privados")
+            except SlackAPIError as e:
+                logger.warning(f"No se pudieron obtener canales privados: {str(e)}")
             
             # También obtener mensajes directos (DMs)
-            dms = self._get_channels("conversations.list", {
-                "types": "im",
-                "member": True,  # Solo DMs donde el bot es miembro
-                "limit": 1000
-            })
-            all_channels.extend(dms)
-            logger.info(f"Encontrados {len(dms)} mensajes directos")
+            try:
+                dms = self._get_channels("conversations.list", {
+                    "types": "im",
+                    "member": True,  # Solo DMs donde el bot es miembro
+                    "limit": 1000
+                })
+                all_channels.extend(dms)
+                logger.info(f"Encontrados {len(dms)} mensajes directos")
+            except SlackAPIError as e:
+                logger.warning(f"No se pudieron obtener mensajes directos: {str(e)}")
             
             # Y grupos de mensajes directos (MPDMs)
-            mpdms = self._get_channels("conversations.list", {
-                "types": "mpim",
-                "member": True,  # Solo MPDMs donde el bot es miembro
-                "limit": 1000
-            })
-            all_channels.extend(mpdms)
-            logger.info(f"Encontrados {len(mpdms)} grupos de mensajes directos")
+            try:
+                mpdms = self._get_channels("conversations.list", {
+                    "types": "mpim",
+                    "member": True,  # Solo MPDMs donde el bot es miembro
+                    "limit": 1000
+                })
+                all_channels.extend(mpdms)
+                logger.info(f"Encontrados {len(mpdms)} grupos de mensajes directos")
+            except SlackAPIError as e:
+                logger.warning(f"No se pudieron obtener grupos de mensajes directos: {str(e)}")
         
         return all_channels
     
