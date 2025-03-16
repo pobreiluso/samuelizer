@@ -143,6 +143,18 @@ poetry run samuelize slack CHANNEL_ID --only-threads
 
 # Only messages with reactions
 poetry run samuelize slack CHANNEL_ID --with-reactions
+
+# Listar todos los canales accesibles (públicos, privados y DMs)
+poetry run samuelize slack-channels --token xoxb-your-token
+
+# Listar solo canales públicos
+poetry run samuelize slack-channels --public-only
+
+# Incluir canales archivados
+poetry run samuelize slack-channels --include-archived
+
+# Guardar resultados en un archivo
+poetry run samuelize slack-channels --output canales_slack.txt
 ```
 
 ### Real-Time Recording and Analysis

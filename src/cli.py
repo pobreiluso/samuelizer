@@ -682,6 +682,69 @@ def clear_cache(confirm):
         sys.exit(1)
 
 
+@cli.command('slack-channels')
+@click.option('--token', help='Slack token. Can also use SLACK_TOKEN env var', default=lambda: os.environ.get('SLACK_TOKEN', None))
+@click.option('--include-private/--public-only', default=True, help='Include private channels and DMs')
+@click.option('--include-archived/--active-only', default=False, help='Include archived channels')
+@click.option('--output', help='Save results to a file', required=False, type=click.Path())
+def list_slack_channels(token, include_private, include_archived, output):
+    """
+    List all Slack channels accessible with the provided token.
+    
+    This command will:
+    1. Connect to Slack API using the provided token
+    2. List all channels the token has access to
+    3. Display channel information including IDs, names, and types
+    4. Optionally save the results to a file
+    
+    Required:
+    - SLACK_TOKEN or --token: Slack Bot User OAuth Token
+    """
+    try:
+        if not token:
+            token = click.prompt('Slack Token', hide_input=True)
+        
+        from src.slack.channel_lister import SlackChannelLister
+        from src.slack.http_client import RequestsClient
+        
+        # Crear el cliente HTTP y el listador de canales
+        http_client = RequestsClient()
+        channel_lister = SlackChannelLister(token, http_client)
+        
+        # Obtener la lista de canales
+        logging.info("Obteniendo lista de canales de Slack...")
+        channels = channel_lister.list_channels(
+            include_private=include_private,
+            include_archived=include_archived
+        )
+        
+        # Enriquecer la información de los canales
+        enriched_channels = channel_lister.get_channel_details(channels)
+        
+        # Formatear para mostrar
+        formatted_text = channel_lister.format_channels_for_display(enriched_channels)
+        
+        # Mostrar en la consola
+        click.echo(formatted_text)
+        
+        # Guardar en archivo si se especificó
+        if output:
+            with open(output, 'w', encoding='utf-8') as f:
+                f.write(formatted_text)
+            logging.info(f"Resultados guardados en: {output}")
+            
+            # También guardar versión JSON para uso programático
+            import json
+            json_output = f"{os.path.splitext(output)[0]}.json"
+            with open(json_output, 'w', encoding='utf-8') as f:
+                json.dump(enriched_channels, f, ensure_ascii=False, indent=2)
+            logging.info(f"Datos JSON guardados en: {json_output}")
+        
+    except Exception as e:
+        logging.error(f"Error al listar canales de Slack: {str(e)}")
+        sys.exit(1)
+
+
 if __name__ == '__main__':
     try:
         cli(obj={})
