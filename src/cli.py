@@ -579,6 +579,7 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                 # Exportar todos los mensajes juntos
                 combined_output = os.path.join(output_dir, f"slack_global_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.json")
                 with open(combined_output, 'w', encoding='utf-8') as f:
+                    import json
                     json.dump({
                         'start_date': start_date.strftime('%Y-%m-%d'),
                         'end_date': end_date.strftime('%Y-%m-%d'),
