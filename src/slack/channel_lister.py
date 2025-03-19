@@ -40,13 +40,21 @@ class SlackChannelLister:
         Raises:
             SlackAPIError: Si hay un error en la API de Slack
         """
+        from src.slack.utils import is_user_token
+        
         all_channels = []
+        
+        # Determinar si es token de usuario o bot
+        is_user = is_user_token(self.token)
+        
+        # Para tokens de usuario, no filtrar por member=True para obtener todos los canales
+        member_filter = False if is_user else True
         
         # Primero obtener canales públicos
         public_channels = self._get_channels("conversations.list", {
             "types": "public_channel",
             "exclude_archived": not include_archived,
-            "member": True,  # Solo canales donde el bot es miembro
+            "member": member_filter,  # Para tokens de usuario, obtener todos los canales
             "limit": 1000
         })
         all_channels.extend(public_channels)
