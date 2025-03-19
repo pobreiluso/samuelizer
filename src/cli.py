@@ -253,7 +253,7 @@ def summarize_text_command(ctx, text, api_key, output, template, params, provide
         # No se necesita API key para modelos locales
         api_key = None
         logger.info("Usando modelos locales para procesamiento (modo offline)")
-    elif not api_key and provider == "openai" and not list_channels:
+    elif not api_key and provider == "openai":
         api_key = click.prompt('OpenAI API key', hide_input=True)
     """
     Analyze and summarize a text.
@@ -592,6 +592,7 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                 # Paso 4: Analizar mensajes
                 
                 # Crear cliente de análisis
+                from src.transcription.meeting_analyzer import AnalysisClient
                 analysis_client = AnalysisClient(
                     provider_name=provider,
                     api_key=api_key,
