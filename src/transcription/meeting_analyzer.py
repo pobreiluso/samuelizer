@@ -57,8 +57,15 @@ class AnalysisClient:
         # Usar el modelo_id pasado como parámetro o el almacenado en la instancia
         model_to_use = model_id or self.model_id
         
+        # Limitar el tamaño de los mensajes para evitar errores
+        max_content_length = 15000  # Ajustar según sea necesario
+        for i, message in enumerate(messages):
+            if "content" in message and len(message["content"]) > max_content_length:
+                logger.warning(f"Mensaje demasiado largo ({len(message['content'])} caracteres). Truncando a {max_content_length} caracteres.")
+                messages[i]["content"] = message["content"][:max_content_length]
+        
         # Si estamos usando OpenAI directamente, manejar diferentes tipos de modelos
-        if self.provider_name.lower() == "openai" and hasattr(self, '_analyze_with_openai'):
+        if self.provider_name.lower() == "openai":
             return self._analyze_with_openai(messages, model_to_use, **kwargs)
         
         # Usar el proveedor configurado
@@ -84,34 +91,59 @@ class AnalysisClient:
         
         try:
             if is_chat_model:
-                # Usar chat completions para modelos de chat
-                response = openai.chat.completions.create(
-                    model=model_id,
-                    messages=messages,
-                    temperature=kwargs.get('temperature', 0),
-                    max_tokens=kwargs.get('max_tokens', 1000)
-                )
-                return response.choices[0].message.content.strip()
+                return self._analyze_with_chat_model(messages, model_id, **kwargs)
             else:
-                # Usar completions para modelos que no son de chat
-                # Extraer el prompt de los mensajes
-                prompt = ""
-                for message in messages:
-                    role = message.get("role", "")
-                    content = message.get("content", "")
-                    if role and content:
-                        prompt += f"{role.upper()}: {content}\n\n"
-                
-                response = openai.completions.create(
-                    model=model_id,
-                    prompt=prompt,
-                    temperature=kwargs.get('temperature', 0),
-                    max_tokens=kwargs.get('max_tokens', 1000)
-                )
-                return response.choices[0].text.strip()
+                try:
+                    return self._analyze_with_completion_model(messages, model_id, **kwargs)
+                except Exception as completion_error:
+                    # Si falla el modelo de completions, intentar con un modelo de chat como fallback
+                    logger.warning(f"Error con modelo de completions {model_id}: {completion_error}. Usando gpt-3.5-turbo como fallback.")
+                    return self._analyze_with_chat_model(messages, "gpt-3.5-turbo", **kwargs)
         except Exception as e:
             logger.error(f"Error en OpenAI API: {e}")
             raise
+            
+    def _analyze_with_chat_model(self, messages: List[Dict[str, str]], model_id: str, **kwargs) -> str:
+        """
+        Analiza texto usando modelos de chat de OpenAI
+        """
+        import openai
+        
+        response = openai.chat.completions.create(
+            model=model_id,
+            messages=messages,
+            temperature=kwargs.get('temperature', 0),
+            max_tokens=kwargs.get('max_tokens', 1000)
+        )
+        return response.choices[0].message.content.strip()
+        
+    def _analyze_with_completion_model(self, messages: List[Dict[str, str]], model_id: str, **kwargs) -> str:
+        """
+        Analiza texto usando modelos de completions de OpenAI
+        """
+        import openai
+        
+        # Extraer el prompt de los mensajes
+        prompt = ""
+        for message in messages:
+            role = message.get("role", "")
+            content = message.get("content", "")
+            if role and content:
+                prompt += f"{role.upper()}: {content}\n\n"
+        
+        # Limitar el tamaño del prompt para evitar errores
+        max_prompt_length = 4000  # Ajustar según sea necesario
+        if len(prompt) > max_prompt_length:
+            logger.warning(f"Prompt demasiado largo ({len(prompt)} caracteres). Truncando a {max_prompt_length} caracteres.")
+            prompt = prompt[:max_prompt_length]
+        
+        response = openai.completions.create(
+            model=model_id,
+            prompt=prompt,
+            temperature=kwargs.get('temperature', 0),
+            max_tokens=kwargs.get('max_tokens', 1000)
+        )
+        return response.choices[0].text.strip()
 
 class TemplateSelector:
     """
