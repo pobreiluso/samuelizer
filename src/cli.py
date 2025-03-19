@@ -679,32 +679,32 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                 else:
                     messages = downloader.fetch_messages()
                     logging.info(f"Downloaded {len(messages)} messages from channel {channel_id}")
+                
+                # Apply filters if specified
+                if user_id:
+                    messages = SlackMessageFilter.by_user(messages, user_id)
+                    logging.info(f"Filtered to {len(messages)} messages from user {user_id}")
+                
+                if only_threads:
+                    messages = SlackMessageFilter.by_has_replies(messages)
+                    logging.info(f"Filtered to {len(messages)} messages with thread replies")
+                
+                if with_reactions:
+                    messages = SlackMessageFilter.by_has_reactions(messages)
+                    logging.info(f"Filtered to {len(messages)} messages with reactions")
+                
+                # Apply date filters if specified
+                if start_date or end_date:
+                    messages = SlackMessageFilter.by_date_range(messages, start_date, end_date)
             
-            # Apply filters if specified
-            if user_id:
-                messages = SlackMessageFilter.by_user(messages, user_id)
-                logging.info(f"Filtered to {len(messages)} messages from user {user_id}")
-            
-            if only_threads:
-                messages = SlackMessageFilter.by_has_replies(messages)
-                logging.info(f"Filtered to {len(messages)} messages with thread replies")
-            
-            if with_reactions:
-                messages = SlackMessageFilter.by_has_reactions(messages)
-                logging.info(f"Filtered to {len(messages)} messages with reactions")
-            
-            # Apply date filters if specified
-            if start_date or end_date:
-                messages = SlackMessageFilter.by_date_range(messages, start_date, end_date)
-        
-            # Export messages to JSON
-            output_file = exporter.export_messages(
-                messages,
-                slack_config.channel_id,
-                slack_config.output_dir,
-                start_date=slack_config.start_date,
-                end_date=slack_config.end_date
-            )
+                # Export messages to JSON
+                output_file = exporter.export_messages(
+                    messages,
+                    slack_config.channel_id,
+                    slack_config.output_dir,
+                    start_date=slack_config.start_date,
+                    end_date=slack_config.end_date
+                )
         except SlackRateLimitError as e:
             logging.error(f"Rate limit exceeded: {e}")
             logging.info(f"Waiting {e.retry_after} seconds before retrying...")
