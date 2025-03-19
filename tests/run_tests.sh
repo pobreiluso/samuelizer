@@ -70,6 +70,12 @@ else
     echo -e "${YELLOW}Las pruebas de Slack se omitirán. Establece SLACK_TOKEN y SLACK_CHANNEL para pruebas completas.${NC}"
 fi
 
+# Ejecutar pruebas específicas de Slack si hay credenciales
+if [ ! -z "$SLACK_TOKEN" ]; then
+    echo -e "${YELLOW}Ejecutando pruebas específicas de Slack...${NC}"
+    poetry run python tests/test_slack_commands.py $API_ARGS $SLACK_ARGS
+fi
+
 # Ejecutar pruebas de comandos
 echo -e "${YELLOW}Ejecutando pruebas de comandos...${NC}"
 
