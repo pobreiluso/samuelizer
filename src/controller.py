@@ -68,7 +68,7 @@ def run_transcription(api_key: str, file_path: str, diarization: bool, use_cache
     return transcription
 
 def run_analysis(transcription: str, provider_name: str = "openai", 
-                model_id: str = "gpt-4", api_key: str = None) -> dict:
+                model_id: str = "gpt-3.5-turbo", api_key: str = None) -> dict:
     # Crear el cliente de análisis con el proveedor seleccionado
     analysis_client = AnalysisClient(
         provider_name=provider_name,
