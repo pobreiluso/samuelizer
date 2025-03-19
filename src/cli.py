@@ -428,6 +428,9 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
             output_dir=output_dir
         )
         
+        # Create services with dependency injection
+        http_client = RequestsClient()
+        
         # Verificar si estamos usando --list-channels o --summary
         if list_channels:
             try:
@@ -596,6 +599,7 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                 )
                 
                 # Registrar plantilla personalizada para resumen global
+                from src.transcription.templates import PromptTemplates
                 templates = PromptTemplates()
                 
                 # Preparar texto para análisis
