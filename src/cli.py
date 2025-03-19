@@ -253,7 +253,7 @@ def summarize_text_command(ctx, text, api_key, output, template, params, provide
         # No se necesita API key para modelos locales
         api_key = None
         logger.info("Usando modelos locales para procesamiento (modo offline)")
-    elif not api_key and provider == "openai":
+    elif not api_key and provider == "openai" and not list_channels:
         api_key = click.prompt('OpenAI API key', hide_input=True)
     """
     Analyze and summarize a text.
