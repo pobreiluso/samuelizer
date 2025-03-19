@@ -126,8 +126,87 @@ class AudioOptimizer:
         return output_file
 
     @staticmethod
+    def split_large_audio(input_file: str, output_dir: str = None, max_size_mb: int = 25, 
+                          segment_duration: int = 600) -> list:
+        """
+        Divide un archivo de audio grande en segmentos más pequeños para procesamiento.
+        
+        Args:
+            input_file (str): Ruta al archivo de audio de entrada
+            output_dir (str): Directorio donde guardar los segmentos
+            max_size_mb (int): Tamaño máximo de cada segmento en MB
+            segment_duration (int): Duración máxima de cada segmento en segundos
+            
+        Returns:
+            list: Lista de rutas a los archivos de segmentos creados
+        """
+        if output_dir is None:
+            output_dir = os.path.dirname(input_file) or "."
+            
+        # Asegurar que el directorio de salida existe
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Obtener la duración total del audio
+        try:
+            result = subprocess.run([
+                'ffprobe',
+                '-v', 'error',
+                '-show_entries', 'format=duration',
+                '-of', 'json',
+                input_file
+            ], capture_output=True, text=True, check=True)
+            
+            info = json.loads(result.stdout)
+            total_duration = float(info['format']['duration'])
+            
+            # Calcular el número de segmentos necesarios
+            num_segments = max(1, int(total_duration / segment_duration) + 1)
+            
+            logger.info(f"Dividiendo archivo de audio de {total_duration:.2f} segundos en {num_segments} segmentos")
+            
+            segment_files = []
+            
+            with tqdm(total=num_segments, desc="Dividiendo audio", unit="segmentos") as pbar:
+                for i in range(num_segments):
+                    start_time = i * segment_duration
+                    
+                    # Si es el último segmento, usar la duración restante
+                    if i == num_segments - 1:
+                        duration = total_duration - start_time
+                    else:
+                        duration = segment_duration
+                    
+                    # Crear nombre para el segmento
+                    base_name = os.path.splitext(os.path.basename(input_file))[0]
+                    segment_file = os.path.join(output_dir, f"{base_name}_segment_{i+1}_{int(time.time())}.mp3")
+                    
+                    # Extraer el segmento
+                    subprocess.run([
+                        'ffmpeg',
+                        '-i', input_file,
+                        '-ss', str(start_time),
+                        '-t', str(duration),
+                        '-c:a', 'libmp3lame',
+                        '-b:a', '64k',
+                        '-ac', '1',
+                        '-ar', '16000',
+                        '-y',
+                        segment_file
+                    ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    
+                    segment_files.append(segment_file)
+                    pbar.update(1)
+            
+            logger.info(f"Audio dividido en {len(segment_files)} segmentos")
+            return segment_files
+            
+        except Exception as e:
+            logger.error(f"Error al dividir el audio: {e}")
+            raise
+    
+    @staticmethod
     def optimize_audio(input_file: str, output_file: str = None, target_bitrate: str = '128k',
-                      remove_silences: bool = True, max_size_mb: int = 100) -> str:
+                      remove_silences: bool = True, max_size_mb: int = 25) -> str:
         """
         Optimiza un archivo de audio para procesamiento con Whisper.
         

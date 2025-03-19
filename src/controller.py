@@ -1,5 +1,6 @@
 import os
 import logging
+import time
 from src.utils.audio_extractor import AudioExtractor
 from src.transcription.meeting_transcription import AudioTranscriptionService, TranscriptionClient
 from src.transcription.meeting_analyzer import MeetingAnalyzer, DocumentManager, AnalysisClient
@@ -18,7 +19,8 @@ from src.models.model_factory import ModelProviderFactory
 logger = logging.getLogger(__name__)
 
 def run_transcription(api_key: str, file_path: str, diarization: bool, use_cache: bool = True,
-                     provider_name: str = "openai", model_id: str = "whisper-1") -> str:
+                     provider_name: str = "openai", model_id: str = "whisper-1", 
+                     force_new_transcription: bool = False) -> str:
     # Configurar la clave API para el proveedor seleccionado
     if provider_name.lower() == "openai":
         os.environ["OPENAI_API_KEY"] = api_key
@@ -30,13 +32,41 @@ def run_transcription(api_key: str, file_path: str, diarization: bool, use_cache
     else:
         # Check if MP3 needs optimization
         from src.utils.audio_optimizer import AudioOptimizer
-        if AudioOptimizer.needs_optimization(file_path):
-            output_dir = os.path.dirname(file_path) or "recordings"
-            os.makedirs(output_dir, exist_ok=True)
-            output_audio = os.path.join(output_dir, os.path.splitext(os.path.basename(file_path))[0] + '_optimized.mp3')
-            audio_file = AudioOptimizer.optimize_audio(file_path, output_audio)
+        
+        # Buscar versiones optimizadas existentes
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        dir_path = os.path.dirname(file_path) or "."
+        optimized_files = [f for f in os.listdir(dir_path) 
+                          if f.startswith(base_name) and '_optimized_' in f and f.endswith('.mp3')]
+        
+        if optimized_files:
+            # Ordenar por fecha de modificación (más reciente primero)
+            optimized_files.sort(key=lambda f: os.path.getmtime(os.path.join(dir_path, f)), reverse=True)
+            optimized_path = os.path.join(dir_path, optimized_files[0])
+            
+            # Preguntar al usuario si desea usar la versión optimizada existente
+            use_optimized = input(f"Se encontró una versión optimizada del audio ({optimized_files[0]}). ¿Usarla? (yes/no): ").lower().strip()
+            if use_optimized in ['y', 'yes', 's', 'si', 'sí']:
+                logger.info(f"Usando archivo de audio optimizado existente: {optimized_path}")
+                audio_file = optimized_path
+            else:
+                # Si el usuario no quiere usar la versión optimizada existente, optimizar de nuevo
+                if AudioOptimizer.needs_optimization(file_path):
+                    output_dir = os.path.dirname(file_path) or "recordings"
+                    os.makedirs(output_dir, exist_ok=True)
+                    output_audio = os.path.join(output_dir, f"{base_name}_optimized_{int(time.time())}.mp3")
+                    audio_file = AudioOptimizer.optimize_audio(file_path, output_audio)
+                else:
+                    audio_file = file_path
         else:
-            audio_file = file_path
+            # No hay versión optimizada, verificar si se necesita optimización
+            if AudioOptimizer.needs_optimization(file_path):
+                output_dir = os.path.dirname(file_path) or "recordings"
+                os.makedirs(output_dir, exist_ok=True)
+                output_audio = os.path.join(output_dir, f"{base_name}_optimized_{int(time.time())}.mp3")
+                audio_file = AudioOptimizer.optimize_audio(file_path, output_audio)
+            else:
+                audio_file = file_path
 
     # Import dependencies for audio processing
     from src.transcription.audio_processor import AudioFileHandler, TranscriptionFileWriter, SpeakerDiarization
@@ -46,6 +76,27 @@ def run_transcription(api_key: str, file_path: str, diarization: bool, use_cache
     if use_cache:
         file_cache = FileCache()
         cache_service = TranscriptionCacheService(file_cache)
+        
+        # Verificar si existe una transcripción en caché
+        transcription_options = {
+            'diarization': diarization, 
+            'model_id': model_id,
+            'provider': provider_name
+        }
+        
+        if cache_service.has_cached_transcription(audio_file, transcription_options):
+            use_cached = input("Se encontró una transcripción en caché. ¿Usarla? (yes/no): ").lower().strip()
+            if use_cached in ['y', 'yes', 's', 'si', 'sí']:
+                logger.info("Usando transcripción en caché...")
+                cached_transcription = cache_service.get_cached_transcription(audio_file, transcription_options)
+                if cached_transcription:
+                    return cached_transcription
+                else:
+                    logger.warning("No se pudo recuperar la transcripción en caché. Procediendo con nueva transcripción.")
+            else:
+                logger.info("El usuario eligió no usar la transcripción en caché. Procediendo con nueva transcripción.")
+                # Desactivar caché para esta ejecución si el usuario no quiere usarla
+                use_cache = False
 
     # Crear el cliente de transcripción con el proveedor seleccionado
     transcription_client = TranscriptionClient(
