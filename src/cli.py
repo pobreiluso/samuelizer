@@ -705,20 +705,20 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                     start_date=slack_config.start_date,
                     end_date=slack_config.end_date
                 )
-        except SlackRateLimitError as e:
-            logging.error(f"Rate limit exceeded: {e}")
-            logging.info(f"Waiting {e.retry_after} seconds before retrying...")
-            time.sleep(e.retry_after or 60)
-            messages = downloader.fetch_messages()
-            
-            # Export messages to JSON
-            output_file = exporter.export_messages(
-                messages,
-                slack_config.channel_id,
-                slack_config.output_dir,
-                start_date=slack_config.start_date,
-                end_date=slack_config.end_date
-            )
+            except SlackRateLimitError as e:
+                logging.error(f"Rate limit exceeded: {e}")
+                logging.info(f"Waiting {e.retry_after} seconds before retrying...")
+                time.sleep(e.retry_after or 60)
+                messages = downloader.fetch_messages()
+                
+                # Export messages to JSON
+                output_file = exporter.export_messages(
+                    messages,
+                    slack_config.channel_id,
+                    slack_config.output_dir,
+                    start_date=slack_config.start_date,
+                    end_date=slack_config.end_date
+                )
         except SlackAPIError as e:
             logging.error(f"Slack API error: {e}")
             sys.exit(1)
