@@ -4,6 +4,18 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def is_user_token(token: str) -> bool:
+    """
+    Determina si el token es de usuario (xoxp) o de bot (xoxb)
+    
+    Args:
+        token: Token de Slack
+        
+    Returns:
+        bool: True si es token de usuario, False si es token de bot
+    """
+    return token.startswith('xoxp-')
+
 def parse_slack_link(link: str) -> Tuple[Optional[str], Optional[str]]:
     """
     Extrae el ID del canal y el timestamp del mensaje de un enlace de Slack.

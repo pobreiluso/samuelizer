@@ -200,8 +200,15 @@ class SlackDownloader(SlackServiceInterface):
             SlackAPIError: If there's an error in the Slack API
             RequestError: If there's an error in the HTTP request
         """
+        from src.slack.utils import is_user_token
+        
         url = f"{self.base_url}/conversations.info"
         params = {"channel": self.config.channel_id}
+        
+        # Si es token de usuario, añadir parámetros adicionales
+        if is_user_token(self.config.token):
+            params["include_num_members"] = True
+            params["include_locale"] = True
         
         try:
             response = self.http_client.get(url, headers=self.headers, params=params, verify=True)
@@ -237,6 +244,8 @@ class SlackDownloader(SlackServiceInterface):
             RequestError: If there's an error in the HTTP request
             SlackAPIError: If there's an error in the Slack API
         """
+        from src.slack.utils import is_user_token
+        
         url = f"{self.base_url}/conversations.history"
         params = {
             "channel": self.config.channel_id,
@@ -248,6 +257,10 @@ class SlackDownloader(SlackServiceInterface):
             params["oldest"] = self.convert_date_to_ts(self.config.start_date)
         if self.config.end_date:
             params["latest"] = self.convert_date_to_ts(self.config.end_date)
+            
+        # Si es token de usuario, añadir parámetros adicionales
+        if is_user_token(self.config.token):
+            params["include_all_metadata"] = True
 
         all_messages = []
         page = 1
@@ -295,12 +308,18 @@ class SlackDownloader(SlackServiceInterface):
             RequestError: If there's an error in the HTTP request
             SlackAPIError: If there's an error in the Slack API
         """
+        from src.slack.utils import is_user_token
+        
         url = f"{self.base_url}/conversations.replies"
         params = {
             "channel": self.config.channel_id,
             "ts": thread_ts,
             "limit": self.config.batch_size,
         }
+        
+        # Si es token de usuario, añadir parámetros adicionales
+        if is_user_token(self.config.token):
+            params["include_all_metadata"] = True
 
         all_messages = []
         page = 1
