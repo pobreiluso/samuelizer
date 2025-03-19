@@ -486,10 +486,22 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                 # Importar las clases necesarias
                 from src.slack.channel_lister import SlackChannelLister
                 
+                # Verificar que el token no esté vacío
+                if not token:
+                    logger.error("No se proporcionó un token de Slack. Usa --token o establece la variable de entorno SLACK_TOKEN.")
+                    sys.exit(1)
+                
                 # Paso 1: Listar todos los canales accesibles
                 logger.info("Obteniendo lista de canales de Slack...")
-                channel_lister = SlackChannelLister(token, http_client)
-                channels = channel_lister.list_channels(include_private=include_private, include_archived=False)
+                try:
+                    channel_lister = SlackChannelLister(token, http_client)
+                    channels = channel_lister.list_channels(include_private=include_private, include_archived=False)
+                except SlackAPIError as e:
+                    if "invalid_auth" in str(e):
+                        logger.error("Error de autenticación con Slack. Verifica que tu token sea válido y tenga los permisos necesarios.")
+                        logger.info("Si estás usando un token de usuario (xoxp), asegúrate de que no haya expirado.")
+                        logger.info("Si estás usando un token de bot (xoxb), asegúrate de que el bot esté instalado en el workspace.")
+                    raise
                 
                 # Enriquecer la información de los canales
                 enriched_channels = channel_lister.get_channel_details(channels)

@@ -130,6 +130,12 @@ class SlackChannelLister:
                         logger.warning(f"Rate limit alcanzado. Esperando {retry_after} segundos...")
                         time.sleep(retry_after)
                         continue
+                    elif error_msg == "invalid_auth":
+                        logger.error("Token de Slack inválido o expirado. Verifica que el token sea correcto y tenga los permisos necesarios.")
+                        if is_user_token(self.token):
+                            logger.info("Estás usando un token de usuario (xoxp). Asegúrate de que sea válido y tenga los permisos necesarios.")
+                        else:
+                            logger.info("Estás usando un token de bot (xoxb). Asegúrate de que sea válido y tenga los permisos necesarios.")
                     raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
                 
                 channels.extend(data.get("channels", []))
