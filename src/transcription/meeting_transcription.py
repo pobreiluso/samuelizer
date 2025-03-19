@@ -137,16 +137,39 @@ class AudioTranscriptionService(TranscriptionService):
             max_size_mb = 25  # Límite de OpenAI para archivos de audio (25MB)
             
             if file_size_mb > max_size_mb:
-                logger.info(f"El archivo de audio es demasiado grande ({file_size_mb:.2f}MB). Dividiendo en segmentos...")
+                logger.info(f"El archivo de audio es demasiado grande ({file_size_mb:.2f}MB). Intentando compresión agresiva...")
                 
                 from src.utils.audio_optimizer import AudioOptimizer
                 
-                # Preguntar al usuario si desea dividir el archivo
-                split_file = input(f"El archivo de audio es demasiado grande ({file_size_mb:.2f}MB) para OpenAI (límite {max_size_mb}MB). ¿Dividir en segmentos? (yes/no): ").lower().strip()
+                # Intentar compresión agresiva primero
+                output_dir = os.path.dirname(audio_file_path) or "."
+                base_name = os.path.splitext(os.path.basename(audio_file_path))[0]
+                compressed_file = os.path.join(output_dir, f"{base_name}_compressed_{int(time.time())}.mp3")
                 
-                if split_file in ['y', 'yes', 's', 'si', 'sí']:
-                    # Dividir el archivo en segmentos
-                    segment_files = AudioOptimizer.split_large_audio(audio_file_path)
+                # Comprimir con bitrate muy bajo (16k) y eliminar silencios
+                compressed_file = AudioOptimizer.optimize_audio(
+                    audio_file_path, 
+                    compressed_file, 
+                    target_bitrate='16k',  # Bitrate muy bajo
+                    remove_silences=True,
+                    aggressive_compression=True
+                )
+                
+                # Verificar si la compresión fue suficiente
+                compressed_size_mb = os.path.getsize(compressed_file) / (1024 * 1024)
+                
+                if compressed_size_mb <= max_size_mb:
+                    logger.info(f"Compresión exitosa. Tamaño reducido a {compressed_size_mb:.2f}MB.")
+                    audio_file_path = compressed_file
+                else:
+                    logger.info(f"La compresión no fue suficiente ({compressed_size_mb:.2f}MB). Se requiere dividir el archivo.")
+                    
+                    # Preguntar al usuario si desea dividir el archivo
+                    split_file = input(f"Incluso después de la compresión, el archivo sigue siendo demasiado grande ({compressed_size_mb:.2f}MB) para OpenAI (límite {max_size_mb}MB). ¿Dividir en segmentos? (yes/no): ").lower().strip()
+                    
+                    if split_file in ['y', 'yes', 's', 'si', 'sí']:
+                        # Dividir el archivo comprimido en segmentos
+                        segment_files = AudioOptimizer.split_large_audio(compressed_file)
                     
                     # Transcribir cada segmento
                     full_transcript = ""

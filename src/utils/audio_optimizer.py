@@ -206,7 +206,8 @@ class AudioOptimizer:
     
     @staticmethod
     def optimize_audio(input_file: str, output_file: str = None, target_bitrate: str = '128k',
-                      remove_silences: bool = True, max_size_mb: int = 25) -> str:
+                      remove_silences: bool = True, max_size_mb: int = 25, 
+                      aggressive_compression: bool = False) -> str:
         """
         Optimiza un archivo de audio para procesamiento con Whisper.
         
@@ -236,19 +237,22 @@ class AudioOptimizer:
         logger.info(f"Optimizando archivo de audio: {input_file}...")
         
         with tqdm(total=100, desc="Optimizando audio", unit="%") as pbar:
-            # Extracción inicial con alta calidad
+            # Determinar el bitrate inicial basado en si queremos compresión agresiva
+            initial_bitrate = '16k' if aggressive_compression else target_bitrate
+            
+            # Extracción inicial
             subprocess.run([
                 'ffmpeg',
                 '-i', input_file,
                 '-vn',                    # Sin video
                 '-acodec', 'libmp3lame', # Usar códec MP3
-                '-b:a', target_bitrate,  # Bitrate objetivo (alta calidad por defecto)
+                '-b:a', initial_bitrate,  # Bitrate objetivo
                 '-ac', '1',              # Audio mono
                 '-ar', '16000',          # Tasa de muestreo 16kHz (suficiente para voz)
                 '-y',                    # Sobrescribir archivo si existe
                 output_file
             ], check=True)
-            pbar.update(40)
+            pbar.update(30)
             
             # Verificar si el archivo es demasiado grande y necesita más optimización
             file_size_mb = AudioOptimizer.get_file_size_mb(output_file)
@@ -256,8 +260,8 @@ class AudioOptimizer:
                 logger.info(f"Tamaño del archivo ({file_size_mb:.2f}MB) excede {max_size_mb}MB. Aplicando optimización adicional...")
                 
                 # Calcular bitrate apropiado basado en el tamaño del archivo
-                new_bitrate = min(int(target_bitrate.rstrip('k')), int((max_size_mb / file_size_mb) * int(target_bitrate.rstrip('k'))))
-                new_bitrate = max(new_bitrate, 32)  # No bajar de 32k
+                new_bitrate = min(int(initial_bitrate.rstrip('k')), int((max_size_mb / file_size_mb) * int(initial_bitrate.rstrip('k'))))
+                new_bitrate = max(new_bitrate, 8 if aggressive_compression else 16)  # Permitir bitrates muy bajos en modo agresivo
                 new_bitrate_str = f"{new_bitrate}k"
                 
                 temp_output = output_file + ".temp.mp3"
@@ -271,15 +275,55 @@ class AudioOptimizer:
                 
                 os.replace(temp_output, output_file)
                 logger.info(f"Bitrate reducido a {new_bitrate_str}")
+                
+                # Si estamos en modo agresivo, intentar reducir aún más
+                if aggressive_compression and AudioOptimizer.get_file_size_mb(output_file) > max_size_mb:
+                    logger.info("Aplicando compresión extrema...")
+                    
+                    # Reducir la tasa de muestreo a 8kHz para comprimir aún más
+                    temp_output = output_file + ".extreme.mp3"
+                    subprocess.run([
+                        'ffmpeg',
+                        '-i', output_file,
+                        '-ar', '8000',     # Reducir tasa de muestreo a 8kHz
+                        '-b:a', '8k',      # Bitrate mínimo
+                        '-ac', '1',        # Mono
+                        '-y',
+                        temp_output
+                    ], check=True)
+                    
+                    os.replace(temp_output, output_file)
+                    logger.info("Compresión extrema aplicada")
             
             pbar.update(30)
             
             # Eliminar silencios si se solicita
             if remove_silences:
                 silence_removed_output = output_file + ".nosilence.mp3"
-                AudioOptimizer.remove_silence(output_file, silence_removed_output)
+                AudioOptimizer.remove_silence(
+                    output_file, 
+                    silence_removed_output,
+                    # Usar parámetros más agresivos si estamos en modo agresivo
+                    silence_threshold='-25dB' if aggressive_compression else '-30dB',
+                    min_silence_duration='0.5' if aggressive_compression else '1.0',
+                    keep_silence='0.1' if aggressive_compression else '0.3'
+                )
                 os.replace(silence_removed_output, output_file)
                 pbar.update(30)
+                
+                # Verificar si después de eliminar silencios aún necesitamos más compresión
+                if aggressive_compression and AudioOptimizer.get_file_size_mb(output_file) > max_size_mb:
+                    logger.info("Aplicando compresión final después de eliminar silencios...")
+                    temp_output = output_file + ".final.mp3"
+                    subprocess.run([
+                        'ffmpeg',
+                        '-i', output_file,
+                        '-b:a', '8k',      # Bitrate mínimo
+                        '-y',
+                        temp_output
+                    ], check=True)
+                    
+                    os.replace(temp_output, output_file)
             
             logger.info(f"Audio optimizado correctamente: {output_file}")
             logger.info(f"Tamaño final del archivo: {AudioOptimizer.get_file_size_mb(output_file):.2f}MB")
