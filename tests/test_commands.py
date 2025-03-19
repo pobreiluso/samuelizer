@@ -34,90 +34,92 @@ class TestSamuelize(unittest.TestCase):
         # Eliminar directorio temporal
         shutil.rmtree(self.test_dir)
         
-    @patch('src.controller.run_transcription')
-    @patch('src.controller.run_analysis')
-    @patch('src.controller.save_meeting_info')
-    def test_media_command(self, mock_save, mock_analyze, mock_transcribe):
+    def test_media_command(self):
         """Probar el comando 'media'"""
         from src.cli import transcribe_media
         
-        # Configurar mocks
-        mock_transcribe.return_value = "Transcripción de prueba"
-        mock_analyze.return_value = {
-            "abstract_summary": "Resumen de prueba",
-            "key_points": "Puntos clave de prueba",
-            "action_items": "Acciones de prueba",
-            "sentiment": "Sentimiento de prueba"
-        }
-        mock_save.return_value = os.path.join(self.test_dir, "output.docx")
-        
         # Crear un contexto de Click para la prueba
         from click.testing import CliRunner
         runner = CliRunner()
         
-        # Ejecutar comando con argumentos simulados
-        with runner.isolated_filesystem():
-            # Crear un archivo de prueba
-            with open("test_video.mp4", "wb") as f:
-                f.write(b"test data")
+        # Parchear las funciones que se llaman dentro del comando
+        with patch('src.controller.run_transcription') as mock_transcribe, \
+             patch('src.controller.run_analysis') as mock_analyze, \
+             patch('src.transcription.meeting_minutes.DocumentManager.save_to_docx') as mock_save:
             
-            # Ejecutar el comando
-            result = runner.invoke(
-                transcribe_media, 
-                ["test_video.mp4", "--api_key", "test_api_key", "--output", "output.docx"]
-            )
+            # Configurar mocks
+            mock_transcribe.return_value = "Transcripción de prueba"
+            mock_analyze.return_value = {
+                "abstract_summary": "Resumen de prueba",
+                "key_points": "Puntos clave de prueba",
+                "action_items": "Acciones de prueba",
+                "sentiment": "Sentimiento de prueba"
+            }
+            mock_save.return_value = os.path.join(self.test_dir, "output.docx")
             
-            # Verificar que no hubo errores
-            if result.exit_code != 0:
-                print(f"Error: {result.output}")
-            
-        # Verificar que se llamaron las funciones correctas
-        mock_transcribe.assert_called_once()
-        mock_analyze.assert_called_once()
-        mock_save.assert_called_once()
+            # Ejecutar comando con argumentos simulados
+            with runner.isolated_filesystem():
+                # Crear un archivo de prueba
+                with open("test_video.mp4", "wb") as f:
+                    f.write(b"test data")
+                
+                # Ejecutar el comando con --local para evitar usar OpenAI
+                result = runner.invoke(
+                    transcribe_media, 
+                    ["test_video.mp4", "--local", "--output", "output.docx"]
+                )
+                
+                # Verificar que no hubo errores
+                self.assertEqual(0, result.exit_code, f"Error: {result.output}")
+                
+                # Verificar que se llamaron las funciones correctas
+                mock_transcribe.assert_called_once()
+                mock_analyze.assert_called_once()
+                mock_save.assert_called_once()
         
-    @patch('src.slack.download_slack_channel.SlackDownloader')
-    @patch('src.controller.run_analysis')
-    @patch('src.controller.save_meeting_info')
-    def test_slack_command(self, mock_save, mock_analyze, mock_downloader):
+    def test_slack_command(self):
         """Probar el comando 'slack'"""
         from src.cli import analyze_slack_messages
         
-        # Configurar mocks
-        mock_instance = MagicMock()
-        mock_instance.fetch_messages.return_value = [
-            {"text": "Mensaje 1", "user": "U123", "ts": "1616161616.123456"},
-            {"text": "Mensaje 2", "user": "U456", "ts": "1616161617.123456"}
-        ]
-        mock_downloader.return_value = mock_instance
-        
-        mock_analyze.return_value = {
-            "abstract_summary": "Resumen de prueba",
-            "key_points": "Puntos clave de prueba",
-            "action_items": "Acciones de prueba",
-            "sentiment": "Sentimiento de prueba"
-        }
-        mock_save.return_value = os.path.join(self.test_dir, "output.docx")
-        
         # Crear un contexto de Click para la prueba
         from click.testing import CliRunner
         runner = CliRunner()
         
-        # Ejecutar comando con argumentos simulados
-        result = runner.invoke(
-            analyze_slack_messages, 
-            ["C123456", "--token", "test_token", "--api_key", "test_api_key"]
-        )
-        
-        # Verificar que no hubo errores
-        if result.exit_code != 0:
-            print(f"Error: {result.output}")
-        
-        # Verificar que se llamaron las funciones correctas
-        mock_downloader.assert_called_once()
-        mock_instance.fetch_messages.assert_called_once()
-        mock_analyze.assert_called_once()
-        mock_save.assert_called_once()
+        # Parchear las funciones que se llaman dentro del comando
+        with patch('src.slack.download_slack_channel.SlackDownloader') as mock_downloader_class, \
+             patch('src.controller.run_analysis') as mock_analyze, \
+             patch('src.transcription.meeting_minutes.DocumentManager.save_to_docx') as mock_save:
+            
+            # Configurar mocks
+            mock_instance = MagicMock()
+            mock_instance.fetch_messages.return_value = [
+                {"text": "Mensaje 1", "user": "U123", "ts": "1616161616.123456"},
+                {"text": "Mensaje 2", "user": "U456", "ts": "1616161617.123456"}
+            ]
+            mock_downloader_class.return_value = mock_instance
+            
+            mock_analyze.return_value = {
+                "abstract_summary": "Resumen de prueba",
+                "key_points": "Puntos clave de prueba",
+                "action_items": "Acciones de prueba",
+                "sentiment": "Sentimiento de prueba"
+            }
+            mock_save.return_value = os.path.join(self.test_dir, "output.docx")
+            
+            # Ejecutar comando con argumentos simulados
+            result = runner.invoke(
+                analyze_slack_messages, 
+                ["C123456", "--token", "test_token", "--local"]
+            )
+            
+            # Verificar que no hubo errores
+            self.assertEqual(0, result.exit_code, f"Error: {result.output}")
+            
+            # Verificar que se llamaron las funciones correctas
+            mock_downloader_class.assert_called_once()
+            mock_instance.fetch_messages.assert_called_once()
+            mock_analyze.assert_called_once()
+            mock_save.assert_called_once()
         
     # No hay un comando 'optimize' en cli.py, así que podemos omitir esta prueba
     # o probar directamente la clase AudioOptimizer
@@ -185,19 +187,16 @@ class TestSamuelize(unittest.TestCase):
         self.assertEqual(result, "Transcripción de prueba")
         mock_provider.transcribe.assert_called_once()
         
-    @patch('openai.chat.completions.create')
-    def test_analysis_client(self, mock_openai):
+    def test_analysis_client(self):
         """Probar el cliente de análisis"""
         from src.transcription.meeting_analyzer import AnalysisClient
         
-        # Configurar el mock de OpenAI
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Análisis de prueba"
-        mock_openai.return_value = mock_response
+        # Crear mock para el proveedor
+        mock_provider = MagicMock()
+        mock_provider.analyze.return_value = "Análisis de prueba"
         
-        # Crear cliente directamente con el provider_name
-        client = AnalysisClient(provider_name="openai", api_key="test_api_key")
+        # Crear cliente con el proveedor mock
+        client = AnalysisClient(provider=mock_provider)
         
         # Probar análisis
         messages = [
@@ -208,7 +207,7 @@ class TestSamuelize(unittest.TestCase):
         
         # Verificar resultado
         self.assertEqual(result, "Análisis de prueba")
-        mock_openai.assert_called_once()
+        mock_provider.analyze.assert_called_once()
         
     @patch('src.transcription.meeting_analyzer.AnalysisClient')
     def test_meeting_analyzer(self, mock_client_class):
