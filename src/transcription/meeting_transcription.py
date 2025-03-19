@@ -202,8 +202,8 @@ class AudioTranscriptionService(TranscriptionService):
                             audio_file_path, full_transcript, transcription_options)
                     
                     return full_transcript
-                else:
-                    logger.warning("El usuario eligió no dividir el archivo. Intentando transcribir el archivo completo...")
+            else:
+                logger.warning("El usuario eligió no dividir el archivo. Intentando transcribir el archivo completo...")
             
             # Proceder con la transcripción normal si el archivo no es demasiado grande o el usuario eligió no dividirlo
             if diarization:
