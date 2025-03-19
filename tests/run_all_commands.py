@@ -187,21 +187,21 @@ def test_slack_command(slack_token, channel_id, api_key):
     
     # Lista de comandos a probar
     commands = [
-        # Comando básico
-        ["poetry", "run", "samuelize", "slack", "--token", slack_token, 
-         "--channel", channel_id, "--api-key", api_key],
+        # Comando básico - Pasar el channel_id como argumento posicional
+        ["poetry", "run", "samuelize", "slack", channel_id, "--token", slack_token, 
+         "--api_key", api_key],
         
         # Con límite de mensajes
-        ["poetry", "run", "samuelize", "slack", "--token", slack_token, 
-         "--channel", channel_id, "--api-key", api_key, "--limit", "50"],
+        ["poetry", "run", "samuelize", "slack", channel_id, "--token", slack_token, 
+         "--api_key", api_key, "--limit", "50"],
         
         # Con diferentes plantillas
-        ["poetry", "run", "samuelize", "slack", "--token", slack_token, 
-         "--channel", channel_id, "--api-key", api_key, "--template", "summary"],
+        ["poetry", "run", "samuelize", "slack", channel_id, "--token", slack_token, 
+         "--api_key", api_key, "--template", "summary"],
         
         # Con salida específica
-        ["poetry", "run", "samuelize", "slack", "--token", slack_token, 
-         "--channel", channel_id, "--api-key", api_key, "--output", output_file],
+        ["poetry", "run", "samuelize", "slack", channel_id, "--token", slack_token, 
+         "--api_key", api_key, "--output", output_file],
     ]
     
     # Ejecutar cada comando
