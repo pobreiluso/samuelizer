@@ -723,9 +723,9 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                     start_date=slack_config.start_date,
                     end_date=slack_config.end_date
                 )
-        except SlackAPIError as e:
-            logging.error(f"Slack API error: {e}")
-            sys.exit(1)
+            except SlackAPIError as e:
+                logging.error(f"Slack API error: {e}")
+                sys.exit(1)
         
         # Find the latest JSON file
         json_files = glob.glob(os.path.join(output_dir, f"slack_messages_{channel_id}*.json"))
