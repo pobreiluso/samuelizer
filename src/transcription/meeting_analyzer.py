@@ -203,9 +203,15 @@ class MeetingAnalyzer:
                 template = self.template_selector.select_template(self.transcription, **kwargs)
             else:
                 template = self.prompt_templates.get_template(template_name, **kwargs)
+                
+            # Preparar los parámetros para el formato de la plantilla
+            format_params = {'text': self.transcription}
+            # Añadir los parámetros adicionales al diccionario de formato
+            format_params.update(kwargs)
+            
             messages = [
                 {"role": "system", "content": template["system"]},
-                {"role": "user", "content": template["template"].format(text=self.transcription)}
+                {"role": "user", "content": template["template"].format(**format_params)}
             ]
             return self.analysis_client.analyze(messages, **kwargs)
         except openai.AuthenticationError as e:
