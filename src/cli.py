@@ -428,19 +428,257 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
             output_dir=output_dir
         )
         
+        # Verificar si estamos usando --list-channels o --summary
+        if list_channels:
+            try:
+                from src.slack.channel_lister import SlackChannelLister
+                
+                # Crear el listador de canales
+                channel_lister = SlackChannelLister(token, http_client)
+                
+                # Obtener la lista de canales
+                logging.info("Obteniendo lista de canales de Slack...")
+                channels = channel_lister.list_channels(
+                    include_private=include_private,
+                    include_archived=include_archived
+                )
+                
+                # Enriquecer la información de los canales
+                enriched_channels = channel_lister.get_channel_details(channels)
+                
+                # Formatear para mostrar
+                formatted_text = channel_lister.format_channels_for_display(enriched_channels)
+                
+                # Mostrar en la consola
+                click.echo(formatted_text)
+                
+                # Guardar en archivo si se especificó
+                if output:
+                    with open(output, 'w', encoding='utf-8') as f:
+                        f.write(formatted_text)
+                    logging.info(f"Resultados guardados en: {output}")
+                    
+                    # También guardar versión JSON para uso programático
+                    import json
+                    json_output = f"{os.path.splitext(output)[0]}.json"
+                    with open(json_output, 'w', encoding='utf-8') as f:
+                        json.dump(enriched_channels, f, ensure_ascii=False, indent=2)
+                    logging.info(f"Datos JSON guardados en: {json_output}")
+                
+                return
+                
+            except Exception as e:
+                logging.error(f"Error al listar canales de Slack: {str(e)}")
+                sys.exit(1)
+        
+        # Manejar el comando --summary
+        elif summary:
+            if not start_date or not end_date:
+                logger.error("Para generar un resumen global se requieren --start-date y --end-date")
+                sys.exit(1)
+                
+            try:
+                # Importar las clases necesarias
+                from src.slack.channel_lister import SlackChannelLister
+                
+                # Paso 1: Listar todos los canales accesibles
+                logger.info("Obteniendo lista de canales de Slack...")
+                channel_lister = SlackChannelLister(token, http_client)
+                channels = channel_lister.list_channels(include_private=include_private, include_archived=False)
+                
+                # Enriquecer la información de los canales
+                enriched_channels = channel_lister.get_channel_details(channels)
+                
+                # Filtrar solo canales donde el bot es miembro
+                member_channels = [c for c in enriched_channels if c.get('is_member', False)]
+                
+                # Limitar el número de canales si se especificó
+                if max_channels > 0 and len(member_channels) > max_channels:
+                    logger.info(f"Limitando análisis a {max_channels} canales (de {len(member_channels)} disponibles)")
+                    member_channels = member_channels[:max_channels]
+                
+                logger.info(f"Analizando {len(member_channels)} canales en el rango de fechas: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
+                
+                # Crear directorio de salida si no existe
+                os.makedirs(output_dir, exist_ok=True)
+                
+                # Paso 2: Descargar mensajes de todos los canales en el rango de fechas
+                all_messages = []
+                channel_messages = {}
+                exporter = JSONExporter()
+                
+                with click.progressbar(member_channels, label='Descargando mensajes de canales') as channels_bar:
+                    for channel in channels_bar:
+                        channel_id = channel['id']
+                        channel_name = channel['name']
+                        
+                        # Configuración para este canal
+                        channel_config = SlackConfig(
+                            token=token,
+                            channel_id=channel_id,
+                            start_date=start_date,
+                            end_date=end_date,
+                            output_dir=output_dir
+                        )
+                        
+                        # Crear el descargador
+                        channel_downloader = SlackDownloader(channel_config, http_client)
+                        
+                        try:
+                            # Descargar mensajes
+                            messages = channel_downloader.fetch_messages()
+                            
+                            # Filtrar por fecha
+                            messages = SlackMessageFilter.by_date_range(messages, start_date, end_date)
+                            
+                            # Solo incluir canales con suficientes mensajes
+                            if len(messages) >= min_messages:
+                                # Añadir información del canal a cada mensaje
+                                for msg in messages:
+                                    msg['_channel_id'] = channel_id
+                                    msg['_channel_name'] = channel_name
+                                
+                                # Guardar mensajes
+                                all_messages.extend(messages)
+                                channel_messages[channel_id] = {
+                                    'name': channel_name,
+                                    'message_count': len(messages),
+                                    'messages': messages
+                                }
+                                
+                                # Exportar mensajes de este canal
+                                exporter.export_messages(
+                                    messages,
+                                    channel_id,
+                                    output_dir,
+                                    start_date=start_date,
+                                    end_date=end_date
+                                )
+                                
+                                logger.info(f"Canal {channel_name} ({channel_id}): {len(messages)} mensajes")
+                            else:
+                                logger.info(f"Canal {channel_name} ({channel_id}): solo {len(messages)} mensajes (mínimo: {min_messages})")
+                                
+                        except Exception as e:
+                            logger.warning(f"Error al descargar mensajes del canal {channel_name} ({channel_id}): {str(e)}")
+                
+                if not all_messages:
+                    logger.error("No se encontraron mensajes en el rango de fechas especificado.")
+                    sys.exit(1)
+                    
+                logger.info(f"Total de mensajes descargados: {len(all_messages)}")
+                
+                # Paso 3: Preparar datos para análisis
+                
+                # Ordenar todos los mensajes por timestamp
+                all_messages.sort(key=lambda x: float(x.get('ts', 0)))
+                
+                # Exportar todos los mensajes juntos
+                combined_output = os.path.join(output_dir, f"slack_global_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.json")
+                with open(combined_output, 'w', encoding='utf-8') as f:
+                    json.dump({
+                        'start_date': start_date.strftime('%Y-%m-%d'),
+                        'end_date': end_date.strftime('%Y-%m-%d'),
+                        'channel_count': len(channel_messages),
+                        'message_count': len(all_messages),
+                        'channels': channel_messages
+                    }, f, ensure_ascii=False, indent=2)
+                
+                logger.info(f"Datos combinados guardados en: {combined_output}")
+                
+                # Paso 4: Analizar mensajes
+                
+                # Crear cliente de análisis
+                analysis_client = AnalysisClient(
+                    provider_name=provider,
+                    api_key=api_key,
+                    model_id=model
+                )
+                
+                # Registrar plantilla personalizada para resumen global
+                templates = PromptTemplates()
+                
+                # Preparar texto para análisis
+                # Limitamos a un número manejable de mensajes para evitar exceder límites de tokens
+                max_messages_for_analysis = 1000
+                if len(all_messages) > max_messages_for_analysis:
+                    logger.warning(f"Limitando análisis a {max_messages_for_analysis} mensajes (de {len(all_messages)} totales)")
+                    # Seleccionar mensajes distribuidos uniformemente
+                    step = len(all_messages) // max_messages_for_analysis
+                    selected_messages = all_messages[::step]
+                else:
+                    selected_messages = all_messages
+                
+                # Formatear mensajes para análisis
+                formatted_messages = []
+                for msg in selected_messages:
+                    channel_name = msg.get('_channel_name', 'desconocido')
+                    user_name = msg.get('user_info', msg.get('user', 'desconocido'))
+                    text = msg.get('text', '')
+                    ts = float(msg.get('ts', 0))
+                    date_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
+                    
+                    formatted_msg = f"[{date_str}] #{channel_name} - {user_name}: {text}"
+                    formatted_messages.append(formatted_msg)
+                
+                analysis_text = "\n".join(formatted_messages)
+                
+                # Crear analizador
+                analyzer = MeetingAnalyzer(
+                    transcription=analysis_text,
+                    analysis_client=analysis_client
+                )
+                
+                # Realizar análisis con parámetros adicionales
+                template_params = {
+                    'start_date': start_date.strftime('%Y-%m-%d'),
+                    'end_date': end_date.strftime('%Y-%m-%d'),
+                    'channel_count': len(channel_messages)
+                }
+                
+                logger.info("Generando resumen global...")
+                result = analyzer.analyze('global_summary', **template_params)
+                
+                # Mostrar resultados
+                click.echo("\n=== Resumen Global de Slack ===")
+                click.echo(f"Período: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
+                click.echo(f"Canales analizados: {len(channel_messages)}")
+                click.echo(f"Total de mensajes: {len(all_messages)}")
+                click.echo("\n" + result)
+                
+                # Guardar resultados en DOCX si se solicitó
+                if output:
+                    from src.transcription.meeting_minutes import DocumentManager
+                    DocumentManager.save_to_docx({'global_summary': result}, output)
+                    logger.info(f"Resumen guardado en: {output}")
+                
+                return
+                
+            except KeyboardInterrupt:
+                logger.info("Proceso interrumpido por el usuario.")
+                sys.exit(0)
+            except Exception as e:
+                logger.error(f"Error inesperado: {str(e)}")
+                import traceback
+                logger.error(traceback.format_exc())
+                sys.exit(1)
+        
         # Create services with dependency injection
         http_client = RequestsClient()
-        downloader = SlackDownloader(slack_config, http_client)
-        exporter = JSONExporter()
         
-        try:
-            # Download messages
-            if thread_ts:
-                messages = downloader.fetch_thread_messages(thread_ts)
-                logging.info(f"Downloaded {len(messages)} messages from thread {thread_ts}")
-            else:
-                messages = downloader.fetch_messages()
-                logging.info(f"Downloaded {len(messages)} messages from channel {channel_id}")
+        # Si no estamos usando --list-channels o --summary, proceder con el análisis de canal específico
+        if not list_channels and not summary:
+            downloader = SlackDownloader(slack_config, http_client)
+            exporter = JSONExporter()
+            
+            try:
+                # Download messages
+                if thread_ts:
+                    messages = downloader.fetch_thread_messages(thread_ts)
+                    logging.info(f"Downloaded {len(messages)} messages from thread {thread_ts}")
+                else:
+                    messages = downloader.fetch_messages()
+                    logging.info(f"Downloaded {len(messages)} messages from channel {channel_id}")
             
             # Apply filters if specified
             if user_id:
