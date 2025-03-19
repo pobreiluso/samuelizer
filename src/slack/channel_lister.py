@@ -4,6 +4,7 @@ import requests
 import time
 from src.slack.http_client import HttpClientInterface, RequestsClient
 from src.slack.exceptions import SlackAPIError, SlackRateLimitError
+from src.slack.utils import is_user_token
 
 logger = logging.getLogger(__name__)
 
