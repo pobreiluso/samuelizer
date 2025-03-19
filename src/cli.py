@@ -395,21 +395,29 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
         # Importar la función para parsear enlaces de Slack
         from src.slack.utils import parse_slack_link
         
-        # Verificar si es un enlace de Slack o un ID de canal
-        if channel_id_or_link.startswith('http'):
-            # Es un enlace de Slack, extraer el ID del canal y posiblemente el timestamp
-            channel_id, link_thread_ts = parse_slack_link(channel_id_or_link)
-            if not channel_id:
-                logging.error("Enlace de Slack inválido. No se pudo extraer el ID del canal.")
-                sys.exit(1)
+        # Verificar si tenemos un channel_id_or_link
+        if channel_id_or_link:
+            # Verificar si es un enlace de Slack o un ID de canal
+            if channel_id_or_link.startswith('http'):
+                # Es un enlace de Slack, extraer el ID del canal y posiblemente el timestamp
+                channel_id, link_thread_ts = parse_slack_link(channel_id_or_link)
+                if not channel_id:
+                    logging.error("Enlace de Slack inválido. No se pudo extraer el ID del canal.")
+                    sys.exit(1)
             
-            # Si se encontró un timestamp en el enlace y no se especificó --thread-ts, usarlo
-            if link_thread_ts and not thread_ts:
-                thread_ts = link_thread_ts
-                logging.info(f"Usando timestamp del enlace: {thread_ts}")
+                # Si se encontró un timestamp en el enlace y no se especificó --thread-ts, usarlo
+                if link_thread_ts and not thread_ts:
+                    thread_ts = link_thread_ts
+                    logging.info(f"Usando timestamp del enlace: {thread_ts}")
+            else:
+                # Es un ID de canal directamente
+                channel_id = channel_id_or_link
         else:
-            # Es un ID de canal directamente
-            channel_id = channel_id_or_link
+            # No se proporcionó un channel_id_or_link, verificar si estamos usando --list-channels o --summary
+            if not list_channels and not summary:
+                logging.error("Se requiere un ID de canal o enlace para analizar mensajes de Slack")
+                sys.exit(1)
+            channel_id = None  # Para --list-channels o --summary no necesitamos un channel_id específico
         
         # Create configuration
         slack_config = SlackConfig(
