@@ -353,10 +353,11 @@ def summarize_text_command(ctx, text, api_key, output, template, params, provide
 @click.option('--max-channels', default=10, type=int, help='Maximum number of channels to analyze (0 for all, >10 includes all channels even if bot is not a member)')
 @click.option('--min-messages', default=5, type=int, help='Minimum number of messages in a channel to include it')
 @click.option('--workers', default=0, type=int, help='Number of parallel workers for downloading (0 = auto)')
+@click.option('--auto-join', is_flag=True, help='Automatically join channels before downloading messages')
 @click.pass_context
 def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output_dir, token, api_key, output, template, provider, model, 
                           thread_ts, user_id, only_threads, with_reactions, summary, list_channels, include_private, include_archived,
-                          max_channels, min_messages, workers):
+                          max_channels, min_messages, workers, auto_join):
     # Obtener las opciones globales del contexto
     local = ctx.obj.get('local', False)
     text_model = ctx.obj.get('text_model', 'facebook/bart-large-cnn')
@@ -427,7 +428,8 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
             channel_id=channel_id,
             start_date=start_date,
             end_date=end_date,
-            output_dir=output_dir
+            output_dir=output_dir,
+            auto_join=auto_join
         )
         
         # Create services with dependency injection
@@ -562,7 +564,8 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                         channel_id=channel_id,
                         start_date=start_date,
                         end_date=end_date,
-                        output_dir=output_dir
+                        output_dir=output_dir,
+                        auto_join=auto_join
                     )
                     
                     # Crear el descargador
