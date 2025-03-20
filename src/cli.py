@@ -350,7 +350,7 @@ def summarize_text_command(ctx, text, api_key, output, template, params, provide
 @click.option('--list-channels', is_flag=True, help='List all Slack channels accessible with the provided token')
 @click.option('--include-private/--public-only', default=True, help='Include private channels and DMs')
 @click.option('--include-archived/--active-only', default=False, help='Include archived channels')
-@click.option('--max-channels', default=0, type=int, help='Maximum number of channels to analyze (0 for all)')
+@click.option('--max-channels', default=100, type=int, help='Maximum number of channels to analyze (0 for all)')
 @click.option('--min-messages', default=5, type=int, help='Minimum number of messages in a channel to include it')
 @click.option('--workers', default=0, type=int, help='Number of parallel workers for downloading (0 = auto)')
 @click.pass_context
@@ -451,6 +451,12 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                 # Enriquecer la información de los canales
                 enriched_channels = channel_lister.get_channel_details(channels)
                 
+                # Mostrar información sobre la cantidad de canales
+                total_channels = len(enriched_channels)
+                if total_channels > 100:
+                    logger.info(f"Se detectaron {total_channels} canales. Para analizar todos, use --max-channels 0")
+                    logger.info(f"Para limitar el análisis a un número específico, use --max-channels N")
+                
                 # Formatear para mostrar
                 formatted_text = channel_lister.format_channels_for_display(enriched_channels)
                 
@@ -506,15 +512,28 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                 # Enriquecer la información de los canales
                 enriched_channels = channel_lister.get_channel_details(channels)
                 
-                # Filtrar solo canales donde el bot es miembro
-                member_channels = [c for c in enriched_channels if c.get('is_member', False)]
+                # Determinar si estamos usando un token de usuario o de bot
+                from src.slack.utils import is_user_token
+                is_user = is_user_token(token)
+                
+                # Si es token de usuario, no filtrar por is_member
+                if is_user:
+                    # Para tokens de usuario, incluir todos los canales accesibles
+                    member_channels = enriched_channels
+                    logger.info(f"Usando token de usuario: acceso a {len(member_channels)} canales")
+                else:
+                    # Para tokens de bot, filtrar solo canales donde el bot es miembro
+                    member_channels = [c for c in enriched_channels if c.get('is_member', False)]
+                    logger.info(f"Usando token de bot: acceso a {len(member_channels)} canales donde el bot es miembro")
                 
                 # Limitar el número de canales si se especificó
                 if max_channels > 0 and len(member_channels) > max_channels:
                     logger.info(f"Limitando análisis a {max_channels} canales (de {len(member_channels)} disponibles)")
                     member_channels = member_channels[:max_channels]
+                else:
+                    logger.info(f"Analizando todos los {len(member_channels)} canales disponibles")
                 
-                logger.info(f"Analizando {len(member_channels)} canales en el rango de fechas: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
+                logger.info(f"Analizando canales en el rango de fechas: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
                 
                 # Crear directorio de salida si no existe
                 os.makedirs(output_dir, exist_ok=True)
