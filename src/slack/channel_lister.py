@@ -137,7 +137,33 @@ class SlackChannelLister:
                             logger.info("Estás usando un token de usuario (xoxp). Asegúrate de que sea válido y tenga los permisos necesarios.")
                         else:
                             logger.info("Estás usando un token de bot (xoxb). Asegúrate de que sea válido y tenga los permisos necesarios.")
-                    raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+                        raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+                    elif error_msg == "not_in_channel":
+                        # Intentar unirse al canal
+                        try:
+                            channel_id = params.get("channel")
+                            if channel_id:
+                                join_url = f"{self.base_url}/conversations.join"
+                                join_response = self.http_client.post(
+                                    join_url, 
+                                    headers=self.headers, 
+                                    json={"channel": channel_id}
+                                )
+                                join_data = join_response.json()
+                                
+                                if join_data.get("ok"):
+                                    logger.info(f"Se unió al canal {channel_id}, reintentando...")
+                                    # Reintentar la solicitud original
+                                    continue
+                                else:
+                                    join_error = join_data.get("error", "Unknown error")
+                                    logger.warning(f"No se pudo unir al canal: {join_error}")
+                            raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+                        except Exception as e:
+                            logger.warning(f"Error al intentar unirse al canal: {e}")
+                            raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+                    else:
+                        raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
                 
                 channels.extend(data.get("channels", []))
                 

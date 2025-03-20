@@ -586,6 +586,19 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                             'messages': messages,
                             'success': True
                         }
+                    except SlackAPIError as e:
+                        error_str = str(e)
+                        if "not_in_channel" in error_str:
+                            logger.warning(f"No se pudo acceder al canal {channel_name} ({channel_id}): no eres miembro")
+                        else:
+                            logger.warning(f"Error al descargar mensajes del canal {channel_name} ({channel_id}): {error_str}")
+                        return {
+                            'channel_id': channel_id,
+                            'channel_name': channel_name,
+                            'messages': [],
+                            'success': False,
+                            'error': error_str
+                        }
                     except Exception as e:
                         logger.warning(f"Error al descargar mensajes del canal {channel_name} ({channel_id}): {str(e)}")
                         return {
