@@ -350,7 +350,7 @@ def summarize_text_command(ctx, text, api_key, output, template, params, provide
 @click.option('--list-channels', is_flag=True, help='List all Slack channels accessible with the provided token')
 @click.option('--include-private/--public-only', default=True, help='Include private channels and DMs')
 @click.option('--include-archived/--active-only', default=False, help='Include archived channels')
-@click.option('--max-channels', default=10, type=int, help='Maximum number of channels to analyze (0 for all)')
+@click.option('--max-channels', default=10, type=int, help='Maximum number of channels to analyze (0 for all, >10 includes all channels even if bot is not a member)')
 @click.option('--min-messages', default=5, type=int, help='Minimum number of messages in a channel to include it')
 @click.option('--workers', default=0, type=int, help='Number of parallel workers for downloading (0 = auto)')
 @click.pass_context
@@ -516,15 +516,20 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                 from src.slack.utils import is_user_token
                 is_user = is_user_token(token)
                 
-                # Si es token de usuario, no filtrar por is_member
+                # Determinar qué canales incluir basado en el tipo de token y los parámetros
                 if is_user:
                     # Para tokens de usuario, incluir todos los canales accesibles
                     member_channels = enriched_channels
                     logger.info(f"Usando token de usuario: acceso a {len(member_channels)} canales")
                 else:
-                    # Para tokens de bot, filtrar solo canales donde el bot es miembro
-                    member_channels = [c for c in enriched_channels if c.get('is_member', False)]
-                    logger.info(f"Usando token de bot: acceso a {len(member_channels)} canales donde el bot es miembro")
+                    # Para tokens de bot, verificar si queremos forzar la inclusión de todos los canales
+                    if max_channels > 10:  # Si se solicitan más de 10 canales, incluir todos aunque el bot no sea miembro
+                        member_channels = enriched_channels
+                        logger.info(f"Usando token de bot con --max-channels {max_channels}: incluyendo todos los {len(member_channels)} canales disponibles")
+                    else:
+                        # Comportamiento predeterminado: solo canales donde el bot es miembro
+                        member_channels = [c for c in enriched_channels if c.get('is_member', False)]
+                        logger.info(f"Usando token de bot: acceso a {len(member_channels)} canales donde el bot es miembro")
                 
                 # Limitar el número de canales si se especificó
                 if max_channels > 0 and len(member_channels) > max_channels:
