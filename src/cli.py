@@ -350,7 +350,7 @@ def summarize_text_command(ctx, text, api_key, output, template, params, provide
 @click.option('--list-channels', is_flag=True, help='List all Slack channels accessible with the provided token')
 @click.option('--include-private/--public-only', default=True, help='Include private channels and DMs')
 @click.option('--include-archived/--active-only', default=False, help='Include archived channels')
-@click.option('--max-channels', default=100, type=int, help='Maximum number of channels to analyze (0 for all)')
+@click.option('--max-channels', default=10, type=int, help='Maximum number of channels to analyze (0 for all)')
 @click.option('--min-messages', default=5, type=int, help='Minimum number of messages in a channel to include it')
 @click.option('--workers', default=0, type=int, help='Number of parallel workers for downloading (0 = auto)')
 @click.pass_context
@@ -437,10 +437,10 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
         if list_channels:
             try:
                 from src.slack.channel_lister import SlackChannelLister
-                
+                        
                 # Crear el listador de canales
                 channel_lister = SlackChannelLister(token, http_client)
-                
+                        
                 # Obtener la lista de canales
                 logging.info("Obteniendo lista de canales de Slack...")
                 channels = channel_lister.list_channels(
@@ -532,6 +532,9 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                     member_channels = member_channels[:max_channels]
                 else:
                     logger.info(f"Analizando todos los {len(member_channels)} canales disponibles")
+                
+                # Añadir mensaje de depuración para verificar el número real de canales
+                logger.info(f"Número real de canales a analizar: {len(member_channels)}")
                 
                 logger.info(f"Analizando canales en el rango de fechas: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
                 
