@@ -55,8 +55,7 @@ class TestSamuelize(unittest.TestCase):
                  patch('src.controller.run_analysis') as mock_analyze, \
                  patch('src.transcription.meeting_minutes.DocumentManager.save_to_docx') as mock_save, \
                  patch('src.utils.audio_extractor.AudioExtractor.extract_audio') as mock_extract, \
-                 patch('whisper.load_model') as mock_load_whisper, \
-                 patch('src.models.local_adapter.LocalProvider._transcribe_with_whisper') as mock_whisper_transcribe:
+                 patch('whisper.load_model') as mock_load_whisper:
                 
                 # Configurar mocks
                 mock_transcribe.return_value = "Transcripción de prueba"
@@ -125,7 +124,10 @@ class TestSamuelize(unittest.TestCase):
              patch('src.slack.utils.is_user_token', return_value=False), \
              patch('glob.glob') as mock_glob, \
              patch('json.load') as mock_json_load, \
-             patch('builtins.open', new_callable=mock_open, read_data='{"messages": []}'):
+             patch('builtins.open', new_callable=mock_open, read_data='{"messages": []}'), \
+             patch('os.path.exists', return_value=True), \
+             patch('os.path.getsize', return_value=1024), \
+             patch('os.path.getctime', return_value=1616161616.0):
             
             # Configurar mocks
             mock_instance = MagicMock()
@@ -166,14 +168,27 @@ class TestSamuelize(unittest.TestCase):
                 # Create directory structure
                 os.makedirs("slack_exports", exist_ok=True)
                 
+                # Create a mock JSON file
+                with open(json_file_path, "w") as f:
+                    f.write('{"messages": [{"text": "Test message", "user": "U123", "ts": "1616161616.123456"}]}')
+                
                 # Ejecutar el comando con contexto que incluye la opción local
                 ctx = click.Context(analyze_slack_messages)
                 ctx.obj = {'local': True, 'whisper_size': 'base', 'text_model': 'facebook/bart-large-cnn'}
                 
                 # Patch the MeetingAnalyzer to avoid actual analysis
-                with patch('src.transcription.meeting_analyzer.MeetingAnalyzer.analyze') as mock_meeting_analyze:
+                with patch('src.transcription.meeting_analyzer.MeetingAnalyzer.analyze') as mock_meeting_analyze, \
+                     patch('src.transcription.meeting_analyzer.AnalysisClient') as mock_analysis_client_class:
+                    
+                    # Configure the mock analysis client
+                    mock_analysis_client = MagicMock()
+                    mock_analysis_client.analyze.return_value = "Análisis de prueba"
+                    mock_analysis_client_class.return_value = mock_analysis_client
+                    
+                    # Configure the meeting analyzer mock
                     mock_meeting_analyze.return_value = "Análisis de prueba"
                     
+                    # Run the command with mocked environment
                     result = runner.invoke(
                         analyze_slack_messages, 
                         ["C123456", "--token", "test_token"],

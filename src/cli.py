@@ -998,6 +998,64 @@ def list_providers():
             default = " (default)" if model == provider_info.get('default_analysis_model') else ""
             click.echo(f"    - {model}{default}")
 
+@cli.command('optimize')
+@click.argument('file_path')
+@click.option('--bitrate', default='128k', help='Target bitrate for optimization (e.g. 32k, 64k, 128k)')
+@click.option('--output', help='Output file path', required=False, type=click.Path())
+@click.option('--no-remove-silences', is_flag=True, help='Do not remove long silences from audio')
+@click.option('--max-size', default=25, help='Maximum file size in MB before applying more aggressive optimization')
+def optimize_audio_command(file_path, bitrate, output, no_remove_silences, max_size):
+    """
+    Optimize an audio file for transcription.
+    
+    FILE_PATH: Path to audio file to optimize
+    
+    The file will be:
+    1. Converted to MP3 format
+    2. Optimized to the target bitrate
+    3. Silences removed (unless --no-remove-silences is specified)
+    """
+    try:
+        # Expandir la ruta del usuario
+        file_path = os.path.expanduser(file_path)
+        
+        # Verificar que el archivo existe
+        if not os.path.exists(file_path):
+            logger.error(f"File does not exist: {file_path}")
+            sys.exit(1)
+            
+        # Importar el optimizador de audio
+        from src.utils.audio_optimizer import AudioOptimizer
+        
+        # Determinar la ruta de salida si no se especificó
+        if not output:
+            base_name = os.path.splitext(os.path.basename(file_path))[0]
+            output_dir = os.path.dirname(file_path) or "."
+            output = os.path.join(output_dir, f"{base_name}_optimized_{int(time.time())}.mp3")
+        
+        # Optimizar el audio
+        result = AudioOptimizer.optimize_audio(
+            file_path,
+            output,
+            target_bitrate=bitrate,
+            remove_silences=not no_remove_silences,
+            max_size_mb=max_size
+        )
+        
+        # Mostrar información sobre el resultado
+        original_size = AudioOptimizer.get_file_size_mb(file_path)
+        optimized_size = AudioOptimizer.get_file_size_mb(result)
+        reduction = (1 - (optimized_size / original_size)) * 100 if original_size > 0 else 0
+        
+        click.echo(f"\nAudio optimizado correctamente:")
+        click.echo(f"- Archivo original: {file_path} ({original_size:.2f}MB)")
+        click.echo(f"- Archivo optimizado: {result} ({optimized_size:.2f}MB)")
+        click.echo(f"- Reducción: {reduction:.1f}%")
+        
+    except Exception as e:
+        logger.error(f"Error optimizing audio: {e}")
+        sys.exit(1)
+
 @cli.command('clear-cache')
 @click.option('--confirm', is_flag=True, help='Skip confirmation prompt')
 def clear_cache(confirm):
