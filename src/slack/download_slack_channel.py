@@ -43,17 +43,10 @@ class RequestError(Exception):
 # Initialize configuration
 config = Config()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(config.LOG_FILE),
-        logging.StreamHandler()
-    ]
-)
+from src.utils.logging_utils import setup_logging
 
-logger = logging.getLogger(__name__)
+# Configure logging
+logger = setup_logging(config.LOG_FILE)
 
 @dataclass
 class SlackConfig:

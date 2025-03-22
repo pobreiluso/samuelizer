@@ -43,46 +43,60 @@ class TestSamuelize(unittest.TestCase):
         from click.testing import CliRunner
         runner = CliRunner()
         
-        # Parchear las funciones que se llaman dentro del comando
-        with patch('src.controller.run_transcription') as mock_transcribe, \
-             patch('src.controller.run_analysis') as mock_analyze, \
-             patch('src.transcription.meeting_minutes.DocumentManager.save_to_docx') as mock_save, \
-             patch('src.utils.audio_extractor.AudioExtractor.extract_audio') as mock_extract:
-            
-            # Configurar mocks
-            mock_transcribe.return_value = "Transcripción de prueba"
-            mock_analyze.return_value = {
-                "abstract_summary": "Resumen de prueba",
-                "key_points": "Puntos clave de prueba",
-                "action_items": "Acciones de prueba",
-                "sentiment": "Sentimiento de prueba"
-            }
-            mock_save.return_value = os.path.join(self.test_dir, "output.docx")
-            mock_extract.return_value = os.path.join(self.test_dir, "extracted_audio.mp3")
-            
-            # Ejecutar comando con argumentos simulados
-            with runner.isolated_filesystem():
-                # Crear un archivo de prueba con contenido real
-                with open("test_video.mp4", "wb") as f:
-                    # Write a minimal valid MP4 header
-                    f.write(b'\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42mp41\x00\x00\x00\x00moov')
+        # Create a real temporary file that exists
+        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
+            extracted_audio_path = temp_file.name
+            # Write some dummy content
+            temp_file.write(b'test audio content')
+        
+        try:
+            # Parchear las funciones que se llaman dentro del comando
+            with patch('src.controller.run_transcription') as mock_transcribe, \
+                 patch('src.controller.run_analysis') as mock_analyze, \
+                 patch('src.transcription.meeting_minutes.DocumentManager.save_to_docx') as mock_save, \
+                 patch('src.utils.audio_extractor.AudioExtractor.extract_audio') as mock_extract:
                 
-                # Ejecutar el comando con contexto que incluye la opción local
-                ctx = click.Context(transcribe_media)
-                ctx.obj = {'local': True, 'whisper_size': 'base', 'text_model': 'facebook/bart-large-cnn'}
-                result = runner.invoke(
-                    transcribe_media, 
-                    ["test_video.mp4", "--output", "output.docx"],
-                    obj=ctx.obj
-                )
+                # Configurar mocks
+                mock_transcribe.return_value = "Transcripción de prueba"
+                mock_analyze.return_value = {
+                    "abstract_summary": "Resumen de prueba",
+                    "key_points": "Puntos clave de prueba",
+                    "action_items": "Acciones de prueba",
+                    "sentiment": "Sentimiento de prueba"
+                }
+                mock_save.return_value = os.path.join(self.test_dir, "output.docx")
+                mock_extract.return_value = extracted_audio_path  # Use the real temp file
                 
-                # Verificar que no hubo errores
-                self.assertEqual(0, result.exit_code, f"Error: {result.output}")
-                
-                # Verificar que se llamaron las funciones correctas
-                mock_transcribe.assert_called_once()
-                mock_analyze.assert_called_once()
-                mock_save.assert_called_once()
+                # Ejecutar comando con argumentos simulados
+                with runner.isolated_filesystem():
+                    # Crear un archivo de prueba con contenido real
+                    with open("test_video.mp4", "wb") as f:
+                        # Write a minimal valid MP4 header
+                        f.write(b'\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42mp41\x00\x00\x00\x00moov')
+                    
+                    # Ejecutar el comando con contexto que incluye la opción local
+                    ctx = click.Context(transcribe_media)
+                    ctx.obj = {'local': True, 'whisper_size': 'base', 'text_model': 'facebook/bart-large-cnn'}
+                    
+                    # Mock the input function to avoid waiting for user input
+                    with patch('builtins.input', return_value='y'):
+                        result = runner.invoke(
+                            transcribe_media, 
+                            ["test_video.mp4", "--output", "output.docx"],
+                            obj=ctx.obj
+                        )
+                    
+                    # Verificar que no hubo errores
+                    self.assertEqual(0, result.exit_code, f"Error: {result.output}")
+                    
+                    # Verificar que se llamaron las funciones correctas
+                    mock_transcribe.assert_called_once()
+                    mock_analyze.assert_called_once()
+                    mock_save.assert_called_once()
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(extracted_audio_path):
+                os.unlink(extracted_audio_path)
         
     def test_slack_command(self):
         """Probar el comando 'slack'"""
@@ -96,7 +110,8 @@ class TestSamuelize(unittest.TestCase):
         with patch('src.slack.download_slack_channel.SlackDownloader') as mock_downloader_class, \
              patch('src.controller.run_analysis') as mock_analyze, \
              patch('src.transcription.meeting_minutes.DocumentManager.save_to_docx') as mock_save, \
-             patch('src.slack.utils.is_user_token', return_value=False):
+             patch('src.slack.utils.is_user_token', return_value=False), \
+             patch('glob.glob') as mock_glob:
             
             # Configurar mocks
             mock_instance = MagicMock()
@@ -104,6 +119,14 @@ class TestSamuelize(unittest.TestCase):
                 {"text": "Mensaje 1", "user": "U123", "ts": "1616161616.123456"},
                 {"text": "Mensaje 2", "user": "U456", "ts": "1616161617.123456"}
             ]
+            # Mock get_channel_info method
+            mock_instance.get_channel_info.return_value = {
+                "channel": {
+                    "id": "C123456",
+                    "name": "test-channel",
+                    "is_private": False
+                }
+            }
             mock_downloader_class.return_value = mock_instance
             
             mock_analyze.return_value = {
@@ -114,11 +137,15 @@ class TestSamuelize(unittest.TestCase):
             }
             mock_save.return_value = os.path.join(self.test_dir, "output.docx")
             
+            # Mock glob to return our JSON file
+            json_file_path = os.path.join("slack_exports", "slack_messages_C123456.json")
+            mock_glob.return_value = [json_file_path]
+            
             # Ejecutar comando con argumentos simulados
             with runner.isolated_filesystem():
                 # Create a mock JSON file for the exporter to find
                 os.makedirs("slack_exports", exist_ok=True)
-                with open("slack_exports/slack_messages_C123456.json", "w") as f:
+                with open(json_file_path, "w") as f:
                     f.write('{"messages": [{"text": "Test message", "user": "U123", "ts": "1616161616.123456"}]}')
                 
                 # Ejecutar el comando con contexto que incluye la opción local
@@ -222,14 +249,13 @@ class TestSamuelize(unittest.TestCase):
             {"role": "user", "content": "Analiza este texto"}
         ]
         
-        # Use patch to prevent actual OpenAI API calls
-        with patch('openai.chat.completions.create') as mock_create:
-            mock_create.return_value.choices[0].message.content = "Análisis de prueba"
+        # Patch the provider_name to ensure we use our mock
+        with patch.object(client, 'provider_name', 'mock'):
             result = client.analyze(messages)
-        
-        # Verificar resultado
-        self.assertEqual(result, "Análisis de prueba")
-        mock_provider.analyze.assert_called_once()
+            
+            # Verificar resultado
+            self.assertEqual(result, "Análisis de prueba")
+            mock_provider.analyze.assert_called_once()
         
     @patch('src.transcription.meeting_analyzer.AnalysisClient')
     def test_meeting_analyzer(self, mock_client_class):

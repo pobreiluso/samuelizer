@@ -16,17 +16,10 @@ from src.transcription.exceptions import (
     MeetingMinutesError
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('meeting_minutes.log'),
-        logging.StreamHandler()
-    ]
-)
+from src.utils.logging_utils import setup_logging
 
-logger = logging.getLogger(__name__)
+# Configure logging
+logger = setup_logging('meeting_minutes.log')
 
 
 class AudioFileHandler:

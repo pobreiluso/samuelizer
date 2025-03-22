@@ -25,17 +25,10 @@ from src.exporters.json_exporter import JSONExporter
 from src.transcription.exceptions import MeetingMinutesError
 from src.utils.audio_extractor import AudioExtractor
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('cli_agent.log'),
-        logging.StreamHandler()
-    ]
-)
+from src.utils.logging_utils import setup_logging
 
-logger = logging.getLogger(__name__)
+# Configure logging
+logger = setup_logging('cli_agent.log')
 
 @click.group()
 @click.option('--local', is_flag=True, help='Use local models instead of API-based ones')
