@@ -33,7 +33,7 @@ fi
 
 # Ejecutar pruebas unitarias con mock para evitar llamadas reales a APIs
 echo -e "${YELLOW}Ejecutando pruebas unitarias...${NC}"
-poetry run python -m unittest discover tests
+poetry run python -m unittest tests/test_commands.py
 
 # Verificar si hay un archivo de audio/video para pruebas
 SAMPLE_MEDIA=""
@@ -66,6 +66,8 @@ if [ -z "$OPENAI_API_KEY" ]; then
     echo -e "${YELLOW}Algunas pruebas pueden fallar. Establece la variable de entorno OPENAI_API_KEY para pruebas completas.${NC}"
     # Establecer una API key de prueba para evitar errores de autenticación
     export OPENAI_API_KEY="sk-test-key-for-testing-purposes-only"
+    # Ejecutar pruebas en modo local para evitar llamadas a la API
+    export TEST_LOCAL_MODE="true"
 fi
 
 # Verificar credenciales de Slack

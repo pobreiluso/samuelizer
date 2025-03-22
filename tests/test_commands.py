@@ -46,7 +46,8 @@ class TestSamuelize(unittest.TestCase):
         # Parchear las funciones que se llaman dentro del comando
         with patch('src.controller.run_transcription') as mock_transcribe, \
              patch('src.controller.run_analysis') as mock_analyze, \
-             patch('src.transcription.meeting_minutes.DocumentManager.save_to_docx') as mock_save:
+             patch('src.transcription.meeting_minutes.DocumentManager.save_to_docx') as mock_save, \
+             patch('src.utils.audio_extractor.AudioExtractor.extract_audio') as mock_extract:
             
             # Configurar mocks
             mock_transcribe.return_value = "Transcripción de prueba"
@@ -57,12 +58,14 @@ class TestSamuelize(unittest.TestCase):
                 "sentiment": "Sentimiento de prueba"
             }
             mock_save.return_value = os.path.join(self.test_dir, "output.docx")
+            mock_extract.return_value = os.path.join(self.test_dir, "extracted_audio.mp3")
             
             # Ejecutar comando con argumentos simulados
             with runner.isolated_filesystem():
-                # Crear un archivo de prueba
+                # Crear un archivo de prueba con contenido real
                 with open("test_video.mp4", "wb") as f:
-                    f.write(b"test data")
+                    # Write a minimal valid MP4 header
+                    f.write(b'\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42mp41\x00\x00\x00\x00moov')
                 
                 # Ejecutar el comando con contexto que incluye la opción local
                 ctx = click.Context(transcribe_media)
@@ -92,7 +95,8 @@ class TestSamuelize(unittest.TestCase):
         # Parchear las funciones que se llaman dentro del comando
         with patch('src.slack.download_slack_channel.SlackDownloader') as mock_downloader_class, \
              patch('src.controller.run_analysis') as mock_analyze, \
-             patch('src.transcription.meeting_minutes.DocumentManager.save_to_docx') as mock_save:
+             patch('src.transcription.meeting_minutes.DocumentManager.save_to_docx') as mock_save, \
+             patch('src.slack.utils.is_user_token', return_value=False):
             
             # Configurar mocks
             mock_instance = MagicMock()
@@ -111,22 +115,29 @@ class TestSamuelize(unittest.TestCase):
             mock_save.return_value = os.path.join(self.test_dir, "output.docx")
             
             # Ejecutar comando con argumentos simulados
-            ctx = click.Context(analyze_slack_messages)
-            ctx.obj = {'local': True, 'whisper_size': 'base', 'text_model': 'facebook/bart-large-cnn'}
-            result = runner.invoke(
-                analyze_slack_messages, 
-                ["C123456", "--token", "test_token"],
-                obj=ctx.obj
-            )
-            
-            # Verificar que no hubo errores
-            self.assertEqual(0, result.exit_code, f"Error: {result.output}")
-            
-            # Verificar que se llamaron las funciones correctas
-            mock_downloader_class.assert_called_once()
-            mock_instance.fetch_messages.assert_called_once()
-            mock_analyze.assert_called_once()
-            mock_save.assert_called_once()
+            with runner.isolated_filesystem():
+                # Create a mock JSON file for the exporter to find
+                os.makedirs("slack_exports", exist_ok=True)
+                with open("slack_exports/slack_messages_C123456.json", "w") as f:
+                    f.write('{"messages": [{"text": "Test message", "user": "U123", "ts": "1616161616.123456"}]}')
+                
+                # Ejecutar el comando con contexto que incluye la opción local
+                ctx = click.Context(analyze_slack_messages)
+                ctx.obj = {'local': True, 'whisper_size': 'base', 'text_model': 'facebook/bart-large-cnn'}
+                result = runner.invoke(
+                    analyze_slack_messages, 
+                    ["C123456", "--token", "test_token"],
+                    obj=ctx.obj
+                )
+                
+                # Verificar que no hubo errores
+                self.assertEqual(0, result.exit_code, f"Error: {result.output}")
+                
+                # Verificar que se llamaron las funciones correctas
+                mock_downloader_class.assert_called_once()
+                mock_instance.fetch_messages.assert_called_once()
+                mock_analyze.assert_called_once()
+                mock_save.assert_called_once()
         
     # No hay un comando 'optimize' en cli.py, así que podemos omitir esta prueba
     # o probar directamente la clase AudioOptimizer
@@ -210,7 +221,11 @@ class TestSamuelize(unittest.TestCase):
             {"role": "system", "content": "Eres un asistente útil"},
             {"role": "user", "content": "Analiza este texto"}
         ]
-        result = client.analyze(messages)
+        
+        # Use patch to prevent actual OpenAI API calls
+        with patch('openai.chat.completions.create') as mock_create:
+            mock_create.return_value.choices[0].message.content = "Análisis de prueba"
+            result = client.analyze(messages)
         
         # Verificar resultado
         self.assertEqual(result, "Análisis de prueba")
