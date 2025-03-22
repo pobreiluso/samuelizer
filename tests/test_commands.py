@@ -72,7 +72,7 @@ class TestSamuelize(unittest.TestCase):
                 mock_model = MagicMock()
                 mock_model.transcribe.return_value = {"text": "Transcripción de prueba"}
                 mock_load_whisper.return_value = mock_model
-                mock_whisper_transcribe.return_value = "Transcripción de prueba"
+                # Remove reference to undefined mock_whisper_transcribe
                 
                 # Ejecutar comando con argumentos simulados
                 with runner.isolated_filesystem():
