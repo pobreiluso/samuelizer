@@ -128,50 +128,7 @@ def test_media_command(sample_media_file, api_key):
     
     return all(results)
 
-def test_optimize_command(sample_audio_file):
-    """Prueba el comando 'optimize' con diferentes opciones"""
-    logger.info("=== PRUEBAS DEL COMANDO OPTIMIZE ===")
-    
-    # Comprobar que el archivo existe
-    if not os.path.exists(sample_audio_file):
-        logger.error(f"El archivo de audio de prueba no existe: {sample_audio_file}")
-        return False
-        
-    # Crear directorio temporal para salidas
-    output_dir = tempfile.mkdtemp()
-    
-    # Lista de comandos a probar
-    commands = [
-        # Comando básico
-        ["poetry", "run", "samuelize", "optimize", sample_audio_file],
-        
-        # Con diferentes bitrates
-        ["poetry", "run", "samuelize", "optimize", sample_audio_file, "--bitrate", "32k"],
-        ["poetry", "run", "samuelize", "optimize", sample_audio_file, "--bitrate", "64k"],
-        ["poetry", "run", "samuelize", "optimize", sample_audio_file, "--bitrate", "128k"],
-        
-        # Con/sin eliminación de silencios
-        ["poetry", "run", "samuelize", "optimize", sample_audio_file, "--no-remove-silences"],
-        
-        # Con salida específica
-        ["poetry", "run", "samuelize", "optimize", sample_audio_file, 
-         "--output", os.path.join(output_dir, "optimized.mp3")],
-    ]
-    
-    # Ejecutar cada comando
-    results = []
-    for cmd in commands:
-        exit_code, _, _ = run_command(cmd, timeout=300)  # 5 minutos máximo
-        results.append(exit_code == 0)
-        
-        # Esperar un poco entre comandos
-        time.sleep(2)
-    
-    # Verificar resultados
-    success_rate = sum(results) / len(results) if results else 0
-    logger.info(f"Tasa de éxito del comando optimize: {success_rate:.2%} ({sum(results)}/{len(results)})")
-    
-    return all(results)
+# Removed test_optimize_command as it's now an internal function
 
 def test_slack_command(slack_token, channel_id, api_key):
     """Prueba el comando 'slack' con diferentes opciones"""
@@ -241,11 +198,7 @@ def main():
     else:
         logger.warning("No se proporcionó archivo de media. Omitiendo pruebas del comando media.")
         
-    # Probar comando optimize si se proporciona un archivo de audio
-    if args.audio_file:
-        results["optimize"] = test_optimize_command(args.audio_file)
-    else:
-        logger.warning("No se proporcionó archivo de audio. Omitiendo pruebas del comando optimize.")
+    # Removed optimize command test
         
     # Probar comando slack si se proporcionan credenciales
     slack_token = args.slack_token or os.environ.get("SLACK_TOKEN")
@@ -259,8 +212,9 @@ def main():
     # Resumen final
     logger.info("=== RESUMEN DE RESULTADOS ===")
     for command, success in results.items():
-        status = "ÉXITO" if success else "FALLO"
-        logger.info(f"Comando {command}: {status}")
+        if command != "optimize":  # Skip optimize command in results
+            status = "ÉXITO" if success else "FALLO"
+            logger.info(f"Comando {command}: {status}")
         
     # Determinar éxito general
     if all(results.values()):

@@ -94,10 +94,7 @@ if [ ! -z "$SAMPLE_MEDIA" ]; then
     MEDIA_ARGS="--media-file $SAMPLE_MEDIA"
 fi
 
-AUDIO_ARGS=""
-if [ ! -z "$SAMPLE_AUDIO" ]; then
-    AUDIO_ARGS="--audio-file $SAMPLE_AUDIO"
-fi
+# Remove AUDIO_ARGS as optimize command is removed
 
 API_ARGS=""
 if [ ! -z "$OPENAI_API_KEY" ]; then
@@ -105,7 +102,7 @@ if [ ! -z "$OPENAI_API_KEY" ]; then
 fi
 
 # Ejecutar script de pruebas de comandos
-poetry run python tests/run_all_commands.py $API_ARGS $MEDIA_ARGS $AUDIO_ARGS $SLACK_ARGS
+poetry run python tests/run_all_commands.py $API_ARGS $MEDIA_ARGS $SLACK_ARGS
 
 # Verificar resultado
 if [ $? -eq 0 ]; then
