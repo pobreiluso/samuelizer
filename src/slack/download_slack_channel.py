@@ -43,17 +43,10 @@ class RequestError(Exception):
 # Initialize configuration
 config = Config()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(config.LOG_FILE),
-        logging.StreamHandler()
-    ]
-)
+from src.utils.logging_utils import setup_logging
 
-logger = logging.getLogger(__name__)
+# Configure logging
+logger = setup_logging(config.LOG_FILE)
 
 @dataclass
 class SlackConfig:
@@ -68,6 +61,7 @@ class SlackConfig:
         output_dir (str): Directory where exported files will be saved
         rate_limit_delay (float): Delay between API requests to avoid rate limiting
         batch_size (int): Number of messages to fetch per API request
+        auto_join (bool): Whether to automatically join channels before downloading messages
     """
     token: str
     channel_id: str
@@ -76,6 +70,7 @@ class SlackConfig:
     output_dir: str = Config.OUTPUT_DIR
     rate_limit_delay: float = Config.SLACK_RATE_LIMIT_DELAY
     batch_size: int = Config.SLACK_BATCH_SIZE
+    auto_join: bool = False
 
 class MessageProcessor:
     """
@@ -200,8 +195,15 @@ class SlackDownloader(SlackServiceInterface):
             SlackAPIError: If there's an error in the Slack API
             RequestError: If there's an error in the HTTP request
         """
+        from src.slack.utils import is_user_token
+        
         url = f"{self.base_url}/conversations.info"
         params = {"channel": self.config.channel_id}
+        
+        # Si es token de usuario, añadir parámetros adicionales
+        if is_user_token(self.config.token):
+            params["include_num_members"] = True
+            params["include_locale"] = True
         
         try:
             response = self.http_client.get(url, headers=self.headers, params=params, verify=True)
@@ -237,6 +239,8 @@ class SlackDownloader(SlackServiceInterface):
             RequestError: If there's an error in the HTTP request
             SlackAPIError: If there's an error in the Slack API
         """
+        from src.slack.utils import is_user_token
+        
         url = f"{self.base_url}/conversations.history"
         params = {
             "channel": self.config.channel_id,
@@ -248,6 +252,10 @@ class SlackDownloader(SlackServiceInterface):
             params["oldest"] = self.convert_date_to_ts(self.config.start_date)
         if self.config.end_date:
             params["latest"] = self.convert_date_to_ts(self.config.end_date)
+            
+        # Si es token de usuario, añadir parámetros adicionales
+        if is_user_token(self.config.token):
+            params["include_all_metadata"] = True
 
         all_messages = []
         page = 1
@@ -261,12 +269,141 @@ class SlackDownloader(SlackServiceInterface):
 
                 if not data.get("ok"):
                     error_msg = data.get("error", "Unknown error")
-                    raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+                    # Si el error es not_in_channel, intentar unirse al canal primero
+                    if error_msg == "not_in_channel" and self.config.auto_join:
+                        try:
+                            # Intentar unirse al canal
+                            join_url = f"{self.base_url}/conversations.join"
+                            join_data = {"channel": self.config.channel_id}
+                            join_response = self.http_client.post(join_url, headers=self.headers, data=join_data)
+                            join_result = join_response.json()
+                            
+                            if join_result.get("ok"):
+                                # Si se unió correctamente, intentar de nuevo la descarga
+                                logging.info(f"Joined channel {self.config.channel_id}, retrying download...")
+                                response = self.http_client.get(url, headers=self.headers, params=params)
+                                response.raise_for_status()
+                                data = response.json()
+                                
+                                if not data.get("ok"):
+                                    # Si sigue fallando, lanzar la excepción
+                                    error_msg = data.get("error", "Unknown error")
+                                    raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+                            else:
+                                # Si no se pudo unir, lanzar la excepción original
+                                join_error = join_result.get("error", "Unknown error")
+                                logging.warning(f"Could not join channel {self.config.channel_id}: {join_error}")
+                                raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+                        except Exception as join_e:
+                            # Si hay un error al intentar unirse, lanzar la excepción original
+                            logging.warning(f"Error joining channel {self.config.channel_id}: {str(join_e)}")
+                            raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+                    elif error_msg == "not_in_channel" and not self.config.auto_join:
+                        # Si no estamos configurados para unirse automáticamente, mostrar un mensaje más claro
+                        logging.warning(f"No eres miembro del canal {self.config.channel_id}. Usa --auto-join para unirte automáticamente.")
+                        raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+                    else:
+                        # Para otros errores, lanzar la excepción directamente
+                        raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
 
                 messages = data["messages"]
                 processed_messages = [self.message_processor.process_message(msg) for msg in messages]
                 all_messages.extend(processed_messages)
                 logging.info(f"Downloaded {len(messages)} messages")
+
+                if "next_cursor" in data.get("response_metadata", {}):
+                    params["cursor"] = data["response_metadata"]["next_cursor"]
+                    page += 1
+                    time.sleep(self.config.rate_limit_delay)
+                else:
+                    break
+
+            except requests.exceptions.RequestException as e:
+                logging.error(f"Request error: {str(e)}")
+                raise RequestError(f"Failed to connect to Slack API: {str(e)}")
+
+        return all_messages
+        
+    def fetch_thread_messages(self, thread_ts: str) -> List[Dict]:
+        """
+        Download all messages from a specific thread
+        
+        Args:
+            thread_ts: Thread timestamp to fetch replies from
+            
+        Returns:
+            List[Dict]: List of message dictionaries
+            
+        Raises:
+            RequestError: If there's an error in the HTTP request
+            SlackAPIError: If there's an error in the Slack API
+        """
+        from src.slack.utils import is_user_token
+        
+        url = f"{self.base_url}/conversations.replies"
+        params = {
+            "channel": self.config.channel_id,
+            "ts": thread_ts,
+            "limit": self.config.batch_size,
+        }
+        
+        # Si es token de usuario, añadir parámetros adicionales
+        if is_user_token(self.config.token):
+            params["include_all_metadata"] = True
+
+        all_messages = []
+        page = 1
+
+        while True:
+            try:
+                logging.info(f"Downloading thread page {page}...")
+                response = self.http_client.get(url, headers=self.headers, params=params)
+                response.raise_for_status()
+                data = response.json()
+
+                if not data.get("ok"):
+                    error_msg = data.get("error", "Unknown error")
+                    # Si el error es not_in_channel, intentar unirse al canal primero
+                    if error_msg == "not_in_channel" and self.config.auto_join:
+                        try:
+                            # Intentar unirse al canal
+                            join_url = f"{self.base_url}/conversations.join"
+                            join_data = {"channel": self.config.channel_id}
+                            join_response = self.http_client.post(join_url, headers=self.headers, data=join_data)
+                            join_result = join_response.json()
+                            
+                            if join_result.get("ok"):
+                                # Si se unió correctamente, intentar de nuevo la descarga
+                                logging.info(f"Joined channel {self.config.channel_id}, retrying download...")
+                                response = self.http_client.get(url, headers=self.headers, params=params)
+                                response.raise_for_status()
+                                data = response.json()
+                                
+                                if not data.get("ok"):
+                                    # Si sigue fallando, lanzar la excepción
+                                    error_msg = data.get("error", "Unknown error")
+                                    raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+                            else:
+                                # Si no se pudo unir, lanzar la excepción original
+                                join_error = join_result.get("error", "Unknown error")
+                                logging.warning(f"Could not join channel {self.config.channel_id}: {join_error}")
+                                raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+                        except Exception as join_e:
+                            # Si hay un error al intentar unirse, lanzar la excepción original
+                            logging.warning(f"Error joining channel {self.config.channel_id}: {str(join_e)}")
+                            raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+                    elif error_msg == "not_in_channel" and not self.config.auto_join:
+                        # Si no estamos configurados para unirse automáticamente, mostrar un mensaje más claro
+                        logging.warning(f"No eres miembro del canal {self.config.channel_id}. Usa --auto-join para unirte automáticamente.")
+                        raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+                    else:
+                        # Para otros errores, lanzar la excepción directamente
+                        raise SlackAPIError(f"Error en la API de Slack: {error_msg}")
+
+                messages = data["messages"]
+                processed_messages = [self.message_processor.process_message(msg) for msg in messages]
+                all_messages.extend(processed_messages)
+                logging.info(f"Downloaded {len(messages)} thread messages")
 
                 if "next_cursor" in data.get("response_metadata", {}):
                     params["cursor"] = data["response_metadata"]["next_cursor"]

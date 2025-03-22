@@ -16,17 +16,10 @@ from src.transcription.exceptions import (
     MeetingMinutesError
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('meeting_minutes.log'),
-        logging.StreamHandler()
-    ]
-)
+from src.utils.logging_utils import setup_logging
 
-logger = logging.getLogger(__name__)
+# Configure logging
+logger = setup_logging('meeting_minutes.log')
 
 
 class AudioFileHandler:
@@ -465,9 +458,28 @@ class MeetingAnalyzer:
             else:
                 template = self.prompt_templates.get_template(template_name, **kwargs)
                 
+            # Preparar los parámetros para el formato de la plantilla
+            format_params = {'text': self.transcription}
+            # Añadir los parámetros adicionales al diccionario de formato
+            format_params.update(kwargs)
+            
+            try:
+                formatted_template = template["template"].format(**format_params)
+            except KeyError as e:
+                logger.warning(f"Missing parameter in template: {e}. Using default values.")
+                # Si falta algún parámetro, intentar con valores predeterminados
+                missing_param = str(e).strip("'")
+                if missing_param == 'start_date':
+                    format_params['start_date'] = 'fecha no especificada'
+                if missing_param == 'end_date':
+                    format_params['end_date'] = 'fecha no especificada'
+                if missing_param == 'channel_count':
+                    format_params['channel_count'] = '0'
+                formatted_template = template["template"].format(**format_params)
+            
             messages = [
                 {"role": "system", "content": template["system"]},
-                {"role": "user", "content": template["template"].format(text=self.transcription)}
+                {"role": "user", "content": formatted_template}
             ]
 
             return self.analysis_client.analyze(messages)

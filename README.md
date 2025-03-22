@@ -22,7 +22,9 @@
 - **Slack Analysis:**  
   - Download and process Slack messages (from channels or threads).  
   - Intelligent replacement of user mentions for improved readability.  
-  - Filter messages by date range.
+  - Advanced filtering options (by date range, user, threads, reactions).
+  - Robust pagination and rate limit handling.
+  - User information caching for improved performance.
 
 - **Audio/Video Transcription:**  
   - Extract and optimize audio from various media formats (MP4, AVI, MKV, MP3, WAV, etc.).  
@@ -121,7 +123,47 @@ poetry run samuelize text "Text to analyze" --template quick
 
 ### Slack Message Analysis
 ```bash
+# Análisis básico de canal usando ID
 poetry run samuelize slack CHANNEL_ID --start-date 2024-01-01 --end-date 2024-02-01
+
+# Análisis usando un enlace de Slack a un canal
+poetry run samuelize slack https://workspace.slack.com/archives/C01234567
+
+# Análisis usando un enlace de Slack a un mensaje específico o hilo
+poetry run samuelize slack https://workspace.slack.com/archives/C01234567/p1234567890123456
+
+# Análisis de un hilo específico usando --thread-ts
+poetry run samuelize slack CHANNEL_ID --thread-ts 1234567890.123456
+
+# Filtrar por usuario
+poetry run samuelize slack CHANNEL_ID --user-id U01234ABC
+
+# Only messages with thread replies
+poetry run samuelize slack CHANNEL_ID --only-threads
+
+# Only messages with reactions
+poetry run samuelize slack CHANNEL_ID --with-reactions
+
+# Listar todos los canales accesibles (públicos, privados y DMs)
+poetry run samuelize slack-channels --token xoxb-your-token
+
+# Listar solo canales públicos
+poetry run samuelize slack-channels --public-only
+
+# Incluir canales archivados
+poetry run samuelize slack-channels --include-archived
+
+# Guardar resultados en un archivo
+poetry run samuelize slack-channels --output canales_slack.txt
+
+# Generar resumen global de todos los canales en un rango de fechas
+poetry run samuelize slack-summary --start-date 2024-01-01 --end-date 2024-01-31 --output resumen_enero.docx
+
+# Analizar solo canales públicos
+poetry run samuelize slack-summary --start-date 2024-01-01 --end-date 2024-01-31 --public-only
+
+# Limitar el análisis a los 10 canales más activos
+poetry run samuelize slack-summary --start-date 2024-01-01 --end-date 2024-01-31 --max-channels 10
 ```
 
 ### Real-Time Recording and Analysis
@@ -133,6 +175,27 @@ poetry run samuelize listen --duration 300
 ### Check Version
 ```bash
 poetry run samuelize version
+```
+
+### Offline Mode (100% Local Processing)
+```bash
+# Process any command completely offline without any external API calls
+poetry run samuelize --offline media path/to/file.mp4 --whisper-size base --text-model facebook/bart-large-cnn
+
+# Process text analysis offline
+poetry run samuelize --local text "Text to analyze" --template quick
+
+# Process Slack messages offline
+poetry run samuelize --local slack CHANNEL_ID --start-date 2024-01-01
+
+# Record and analyze audio offline
+poetry run samuelize --local listen --duration 300
+```
+
+### Using Local Models with Specific Whisper Size
+```bash
+# Specify the size of the Whisper model to use (tiny, base, small, medium, large)
+poetry run samuelize --local --whisper-size medium media path/to/file.mp4
 ```
 
 ---

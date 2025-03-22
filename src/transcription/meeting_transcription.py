@@ -1,6 +1,7 @@
 import os
 import openai
 import logging
+import time
 from tqdm import tqdm
 from typing import Dict, Any, Optional
 from src.interfaces import TranscriptionService, CacheInterface
@@ -130,6 +131,81 @@ class AudioTranscriptionService(TranscriptionService):
                         return cached_transcription
             
             logger.info(f"Starting transcription with provider: {self.provider_name}, model: {self.model_id}...")
+            
+            # Verificar el tamaño del archivo
+            file_size_mb = os.path.getsize(audio_file_path) / (1024 * 1024)
+            max_size_mb = 25  # Límite de OpenAI para archivos de audio (25MB)
+            
+            if file_size_mb > max_size_mb:
+                logger.info(f"El archivo de audio es demasiado grande ({file_size_mb:.2f}MB). Intentando compresión agresiva...")
+                
+                from src.utils.audio_optimizer import AudioOptimizer
+                
+                # Intentar compresión agresiva primero
+                output_dir = os.path.dirname(audio_file_path) or "."
+                base_name = os.path.splitext(os.path.basename(audio_file_path))[0]
+                compressed_file = os.path.join(output_dir, f"{base_name}_compressed_{int(time.time())}.mp3")
+                
+                # Comprimir con bitrate muy bajo (16k) y eliminar silencios
+                compressed_file = AudioOptimizer.optimize_audio(
+                    audio_file_path, 
+                    compressed_file, 
+                    target_bitrate='16k',  # Bitrate muy bajo
+                    remove_silences=True,
+                    aggressive_compression=True
+                )
+                
+                # Verificar si la compresión fue suficiente
+                compressed_size_mb = os.path.getsize(compressed_file) / (1024 * 1024)
+                
+                if compressed_size_mb <= max_size_mb:
+                    logger.info(f"Compresión exitosa. Tamaño reducido a {compressed_size_mb:.2f}MB.")
+                    audio_file_path = compressed_file
+                else:
+                    logger.info(f"La compresión no fue suficiente ({compressed_size_mb:.2f}MB). Se requiere dividir el archivo.")
+                    
+                    # Preguntar al usuario si desea dividir el archivo
+                    split_file = input(f"Incluso después de la compresión, el archivo sigue siendo demasiado grande ({compressed_size_mb:.2f}MB) para OpenAI (límite {max_size_mb}MB). ¿Dividir en segmentos? (yes/no): ").lower().strip()
+                    
+                    if split_file in ['y', 'yes', 's', 'si', 'sí']:
+                        # Dividir el archivo comprimido en segmentos
+                        segment_files = AudioOptimizer.split_large_audio(compressed_file)
+                    
+                    # Transcribir cada segmento
+                    full_transcript = ""
+                    for i, segment_file in enumerate(segment_files):
+                        logger.info(f"Transcribiendo segmento {i+1}/{len(segment_files)}...")
+                        with open(segment_file, 'rb') as audio_file:
+                            segment_transcription = self.transcription_client.transcribe(
+                                audio_file, 
+                                model_id=self.model_id,
+                                response_format="text"
+                            )
+                            full_transcript += f"\n--- Segmento {i+1} ---\n{segment_transcription}\n"
+                        
+                        # Eliminar el archivo de segmento después de transcribirlo
+                        try:
+                            os.remove(segment_file)
+                        except Exception as e:
+                            logger.warning(f"No se pudo eliminar el archivo de segmento {segment_file}: {e}")
+                    
+                    self.file_writer.save_transcription(full_transcript, audio_file_path)
+                    
+                    # Cache the result
+                    if use_cache and self.cache_service:
+                        transcription_options = {
+                            'diarization': diarization, 
+                            'model_id': self.model_id,
+                            'provider': self.provider_name
+                        }
+                        self.cache_service.cache_transcription(
+                            audio_file_path, full_transcript, transcription_options)
+                    
+                    return full_transcript
+            else:
+                logger.warning("El usuario eligió no dividir el archivo. Intentando transcribir el archivo completo...")
+            
+            # Proceder con la transcripción normal si el archivo no es demasiado grande o el usuario eligió no dividirlo
             if diarization:
                 logger.info("Diarization enabled. Processing audio segments...")
                 segments = self.diarization_service.detect_speakers(audio_file_path)

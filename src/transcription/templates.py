@@ -485,6 +485,131 @@ class PromptTemplates:
             }
         },
 
+        "brainstorming": {
+            "system": "You are an AI specialized in capturing and organizing ideas from brainstorming sessions where multiple people speak simultaneously and ideas flow rapidly without structure.",
+            "template": """
+            Analyze this brainstorming session and extract all valuable ideas, even those mentioned briefly or incompletely. Organize them in the following format:
+
+            🌟 **Core Problem/Challenge**
+            • Identify the central problem or challenge being addressed
+            • Include context if available
+
+            💭 **All Ideas Captured** (don't miss any, even partial ones)
+            • Idea 1: [Brief description]
+            • Idea 2: [Brief description]
+            • ...
+            • Include even half-formed or interrupted ideas
+            • Capture ideas even when people talk over each other
+
+            🔍 **Idea Categories**
+            Group similar ideas into 3-5 categories such as:
+            
+            **Category 1: [Name]**
+            • Related idea 1
+            • Related idea 2
+            
+            **Category 2: [Name]**
+            • Related idea 3
+            • Related idea 4
+
+            💎 **Standout Concepts**
+            • Most innovative ideas
+            • Ideas that received positive reactions
+            • Unique approaches mentioned
+
+            🔄 **Potential Combinations**
+            • Identify ideas that could be combined for greater impact
+            • Note complementary concepts
+
+            ⚡️ **Next Steps**
+            • Suggested actions to develop promising ideas
+            • Areas requiring further brainstorming
+            • Potential prototypes or tests
+
+            Important guidelines:
+            - Capture ALL ideas, even those that seem incomplete or were interrupted
+            - Don't filter out "bad ideas" - in brainstorming, all ideas have potential value
+            - Pay attention to emotional reactions to ideas (excitement, agreement, etc.)
+            - Note when ideas build upon each other
+            - Preserve the creative essence of ideas even when they're expressed chaotically
+            - Use simple language to describe complex ideas
+
+            Text to analyze:
+            {text}
+            """,
+            "parameters": {
+                "max_length": 1200,
+                "style": "comprehensive",
+                "format": "structured",
+                "preserve_all_ideas": True,
+                "categorize_ideas": True
+            }
+        },
+        
+        "global_summary": {
+            "system": """Eres un asistente especializado en analizar conversaciones de Slack y generar resúmenes ejecutivos detallados. 
+            Tu tarea es identificar temas importantes, patrones de comunicación, interdependencias entre canales y extraer información clave.""",
+            "template": """
+            Analiza las siguientes conversaciones de Slack que ocurrieron entre {start_date} y {end_date} en {channel_count} canales diferentes.
+            
+            Tu objetivo es crear un resumen global que:
+            1. Identifique los temas principales discutidos en todos los canales
+            2. Destaque las conversaciones más importantes y sus conclusiones
+            3. Identifique patrones de comunicación entre canales (temas que aparecen en múltiples canales)
+            4. Reconozca a los participantes clave y sus contribuciones principales
+            5. Extraiga decisiones importantes y elementos de acción
+            6. Identifique cualquier problema o desafío recurrente
+            
+            Organiza tu resumen en estas secciones:
+            
+            📊 **RESUMEN EJECUTIVO**
+            • Una visión general concisa de toda la actividad
+            • Tendencias principales observadas
+            • Volumen y naturaleza de las comunicaciones
+            
+            🔍 **TEMAS PRINCIPALES**
+            • Los temas más discutidos y su importancia
+            • Cómo evolucionaron estos temas durante el período
+            • Qué canales fueron más activos para cada tema
+            
+            ✅ **DECISIONES CLAVE**
+            • Decisiones importantes tomadas durante este período
+            • Quién tomó o influyó en cada decisión
+            • Impacto potencial de estas decisiones
+            
+            📋 **ELEMENTOS DE ACCIÓN**
+            • Tareas y responsabilidades asignadas
+            • Plazos mencionados
+            • Estado actual (si se puede determinar)
+            
+            ⚠️ **PROBLEMAS Y DESAFÍOS**
+            • Problemas identificados que requieren atención
+            • Bloqueos o impedimentos mencionados
+            • Preocupaciones expresadas por los participantes
+            
+            👥 **PARTICIPANTES DESTACADOS**
+            • Personas que tuvieron contribuciones significativas
+            • Áreas de especialización o responsabilidad
+            • Patrones de interacción entre participantes clave
+            
+            📢 **ANÁLISIS DE CANALES**
+            • Breve resumen de la actividad en cada canal principal
+            • Cómo se relacionan los canales entre sí
+            • Canales más activos y su enfoque principal
+            
+            Usa un estilo ejecutivo, claro y conciso. Incluye ejemplos específicos cuando sea relevante, pero mantén el enfoque en las tendencias generales y la información más importante.
+            
+            Conversaciones a analizar:
+            
+            {text}
+            """,
+            "parameters": {
+                "max_length": 2000,
+                "style": "executive",
+                "format": "structured"
+            }
+        },
+
         "auto": {
             "system": """You are an AI expert in content analysis and template selection.
             Your task is to analyze the given text and determine the most appropriate template

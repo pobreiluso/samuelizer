@@ -1,132 +1,102 @@
 import os
 import subprocess
 import logging
-import json
 from tqdm import tqdm
+from src.utils.audio_optimizer import AudioOptimizer
 
 logger = logging.getLogger(__name__)
 
 class AudioExtractor:
+    """
+    Clase responsable de extraer audio de archivos multimedia.
+    Sigue el principio de responsabilidad única (SRP) de SOLID.
+    """
+    
     @staticmethod
     def get_supported_formats():
+        """
+        Obtiene los formatos de archivo soportados para extracción de audio
+        
+        Returns:
+            list: Lista de extensiones de archivo soportadas
+        """
         return ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4a', '.wav', '.aac', '.mp3', '.ogg']
 
     @staticmethod
-    def get_audio_info(file_path):
+    def extract_audio(input_file: str, target_bitrate: str = '128k', chunk_size: int = 8192, 
+                      remove_silences: bool = True, max_size_mb: int = 100) -> str:
         """
-        Get audio file information using ffprobe.
+        Extrae audio de un archivo multimedia y lo optimiza para procesamiento con Whisper.
         
         Args:
-            file_path (str): Path to the audio file
-            
-        Returns:
-            dict: Audio stream information containing:
-                - bit_rate: Current bitrate
-                - codec_name: Audio codec used
-                
-        Raises:
-            subprocess.CalledProcessError: If ffprobe command fails
-            json.JSONDecodeError: If ffprobe output is not valid JSON
-        """
-        try:
-            result = subprocess.run([
-                'ffprobe',
-                '-v', 'error',
-                '-select_streams', 'a:0',
-                '-show_entries', 'stream=bit_rate,codec_name',
-                '-of', 'json',
-                file_path
-            ], capture_output=True, text=True, check=True)
-            info = json.loads(result.stdout)
-            return info.get('streams', [{}])[0]
-        except Exception as e:
-            logger.warning(f"Could not get audio information: {e}")
-            return {}
-
-    @staticmethod
-    def needs_optimization(file_path, target_bitrate='32k'):
-        """
-        Determine if the audio file needs optimization.
-        
-        Args:
-            file_path (str): Path to the audio file
-            target_bitrate (str): Target bitrate (e.g., '32k', '64k')
-            
-        Returns:
-            bool: True if file needs optimization, False otherwise
-            
-        Notes:
-            - Non-MP3 files always need optimization
-            - Files with higher bitrate than target need optimization
-            - Files without bitrate info are assumed to need optimization
-        """
-        if not file_path.lower().endswith('.mp3'):
-            return True
-            
-        info = AudioExtractor.get_audio_info(file_path)
-        current_bitrate = info.get('bit_rate')
-        
-        if not current_bitrate:
-            return True
-            
-        # Convert target_bitrate to bits
-        target_bits = int(target_bitrate.rstrip('k')) * 1024
-        
-        # If current bitrate is higher than target, needs optimization
-        return int(current_bitrate) > target_bits
-
-    @staticmethod
-    def extract_audio(input_file: str, target_bitrate: str = '32k', chunk_size: int = 8192) -> str:
-        """
-        Extract or optimize audio for Whisper processing.
-        
-        Args:
-            input_file (str): Path to input media file
-            target_bitrate (str): Target bitrate for optimization
-                                 '32k' for low quality
-                                 '64k' for medium quality
+            input_file (str): Ruta al archivo multimedia de entrada
+            target_bitrate (str): Bitrate objetivo para optimización
+                                 '128k' para alta calidad (por defecto)
+                                 '64k' para calidad media
+                                 '32k' para calidad baja
+            chunk_size (int): Tamaño de chunk para operaciones de archivo
+            remove_silences (bool): Si se deben eliminar silencios largos
+            max_size_mb (int): Tamaño máximo del archivo en MB antes de aplicar optimización más agresiva
                                  
         Returns:
-            str: Path to the processed audio file
+            str: Ruta al archivo de audio procesado
             
         Raises:
-            subprocess.CalledProcessError: If ffmpeg command fails
-            OSError: If file operations fail
+            subprocess.CalledProcessError: Si el comando ffmpeg falla
+            OSError: Si las operaciones de archivo fallan
         """
-        logger.info(f"Processing media file: {input_file}...")
+        logger.info(f"Procesando archivo multimedia: {input_file}...")
         
-        # If it's a supported audio file, check if it needs optimization
+        # Obtener directorio de salida (mismo que el directorio de grabaciones)
+        output_dir = os.path.dirname(input_file)
+        if not output_dir:
+            output_dir = "recordings"
+            os.makedirs(output_dir, exist_ok=True)
+        
+        # Si es un archivo de audio soportado, verificar si necesita optimización
         if input_file.lower().endswith(('.mp3', '.wav', '.m4a', '.aac', '.ogg')):
-            if not AudioExtractor.needs_optimization(input_file, target_bitrate):
-                logger.info("File is already optimized, skipping processing")
+            if not AudioOptimizer.needs_optimization(input_file, target_bitrate):
+                logger.info("El archivo ya está optimizado, omitiendo procesamiento")
                 return input_file
             
-            output_audio = os.path.splitext(input_file)[0] + f'_optimized_{target_bitrate}.mp3'
+            output_audio = os.path.join(output_dir, os.path.splitext(os.path.basename(input_file))[0] + f'_optimized.mp3')
         else:
-            output_audio = os.path.splitext(input_file)[0] + f'_{target_bitrate}.mp3'
+            output_audio = os.path.join(output_dir, os.path.splitext(os.path.basename(input_file))[0] + f'_audio.mp3')
+        
         if os.path.exists(output_audio):
-            answer = input("Output audio file already exists. Delete it? (yes/no): ")
+            answer = input(f"El archivo de audio de salida {output_audio} ya existe. ¿Eliminarlo? (yes/no): ")
             if answer.lower() == 'yes':
-                logger.info(f"Deleting {output_audio}...")
+                logger.info(f"Eliminando {output_audio}...")
                 os.remove(output_audio)
             else:
-                logger.info("Audio extraction cancelled by user.")
+                logger.info("Extracción de audio cancelada por el usuario.")
                 return output_audio
 
-        with tqdm(total=100, desc="Extracting audio", unit="%") as pbar:
-            logger.info("Starting audio extraction with ffmpeg...")
-            pbar.update(10)
+        # Extraer audio del archivo multimedia
+        with tqdm(total=100, desc="Extrayendo audio", unit="%") as pbar:
+            logger.info("Iniciando extracción de audio con ffmpeg...")
+            
+            # Extracción inicial
             subprocess.run([
                 'ffmpeg',
                 '-i', input_file,
-                '-vn',                    # No video
-                '-acodec', 'libmp3lame', # Use MP3 codec
-                '-b:a', target_bitrate,  # Target bitrate
-                '-ac', '1',              # Mono audio
-                '-ar', '16000',          # Sample rate 16kHz (sufficient for voice)
-                '-y',                    # Overwrite file if exists
+                '-vn',                    # Sin video
+                '-acodec', 'libmp3lame', # Usar códec MP3
+                '-b:a', target_bitrate,  # Bitrate objetivo
+                '-ac', '1',              # Audio mono
+                '-ar', '16000',          # Tasa de muestreo 16kHz (suficiente para voz)
+                '-y',                    # Sobrescribir archivo si existe
                 output_audio
             ], check=True)
-            pbar.update(90)
-            logger.info(f"Audio successfully extracted to {output_audio}")
-        return output_audio
+            pbar.update(100)
+            
+            logger.info(f"Audio extraído correctamente: {output_audio}")
+        
+        # Optimizar el audio extraído
+        return AudioOptimizer.optimize_audio(
+            output_audio, 
+            output_audio, 
+            target_bitrate=target_bitrate,
+            remove_silences=remove_silences,
+            max_size_mb=max_size_mb
+        )

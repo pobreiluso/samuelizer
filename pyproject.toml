@@ -20,6 +20,10 @@ tqdm = "^4.66.1"
 pyaudio = "^0.2.14"
 sounddevice = "^0.4.6"
 numpy = "^1.26.3"
+openai-whisper = {version = "^20231117", optional = true}
+transformers = {version = "^4.35.2", optional = true}
+torch = {version = "^2.1.1", optional = true}
+sentencepiece = {version = "^0.1.99", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
@@ -58,3 +62,5 @@ python_files = "test_*.py"
 python_functions = "test_*"
 python_classes = "Test*"
 addopts = "--cov=src --cov-report=term-missing"
+[tool.poetry.extras]
+local_models = ["torch", "openai-whisper", "transformers", "sentencepiece"]
