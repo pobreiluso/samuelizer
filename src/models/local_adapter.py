@@ -85,10 +85,11 @@ class LocalProvider(AIModelProviderInterface, TranscriptionModelInterface, TextA
         """
         if self.text_model is None:
             # Verificar que el modelo_id sea válido para modelos locales
-            if self.text_model_id in ["gpt-4", "gpt-3.5-turbo", "gpt-4-turbo"]:
-                # Si es un modelo de OpenAI, usar un modelo local por defecto
+            if self.text_model_id in ["gpt-4", "gpt-3.5-turbo", "gpt-4-turbo", "base"]:
+                # Si es un modelo de OpenAI o 'base', usar un modelo local por defecto
+                original_model = self.text_model_id
                 self.text_model_id = "facebook/bart-large-cnn"
-                logger.warning(f"Modelo '{self.text_model_id}' no es válido para procesamiento local. Usando modelo por defecto: facebook/bart-large-cnn")
+                logger.warning(f"Modelo '{original_model}' no es válido para procesamiento local. Usando modelo por defecto: facebook/bart-large-cnn")
             
             logger.info(f"Cargando modelo de análisis '{self.text_model_id}'...")
             self.text_model = pipeline(
