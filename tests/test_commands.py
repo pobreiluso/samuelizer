@@ -4,7 +4,7 @@ import tempfile
 import shutil
 import logging
 import click
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, mock_open
 from pathlib import Path
 
 # Configurar logging para las pruebas
