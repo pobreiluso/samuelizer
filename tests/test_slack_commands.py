@@ -126,10 +126,16 @@ def test_slack_summary(slack_token, api_key):
     output_dir = tempfile.mkdtemp()
     output_file = os.path.join(output_dir, "resumen_slack.docx")
     
-    # Obtener fecha actual y de ayer para el rango
+    # Obtener fecha del último día laborable (viernes) y una semana antes
     from datetime import datetime, timedelta
-    today = datetime.now().strftime("%Y-%m-%d")
-    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    today = datetime.now()
+    # Calcular el último viernes (día 4 de la semana, donde lunes es 0)
+    days_since_friday = (today.weekday() - 4) % 7
+    last_friday = (today - timedelta(days=days_since_friday)).strftime("%Y-%m-%d")
+    # Una semana antes del último viernes
+    week_before_friday = (today - timedelta(days=days_since_friday+7)).strftime("%Y-%m-%d")
+    
+    logger.info(f"Analizando mensajes desde {week_before_friday} hasta {last_friday}")
     
     # Comando a probar
     command = [
@@ -137,8 +143,8 @@ def test_slack_summary(slack_token, api_key):
         "--summary", 
         "--token", slack_token,
         "--api_key", api_key,
-        "--start-date", yesterday,
-        "--end-date", today,
+        "--start-date", week_before_friday,
+        "--end-date", last_friday,
         "--output", output_file,
         "--min-messages", "1",  # Reducir el mínimo para pruebas
         "--max-channels", "3"   # Limitar a 3 canales para que sea más rápido
@@ -168,12 +174,25 @@ def test_slack_channel(slack_token, api_key, channel_id):
     output_dir = tempfile.mkdtemp()
     output_file = os.path.join(output_dir, "canal_slack.docx")
     
-    # Comando a probar
+    # Obtener fecha del último día laborable (viernes) y una semana antes
+    from datetime import datetime, timedelta
+    today = datetime.now()
+    # Calcular el último viernes (día 4 de la semana, donde lunes es 0)
+    days_since_friday = (today.weekday() - 4) % 7
+    last_friday = (today - timedelta(days=days_since_friday)).strftime("%Y-%m-%d")
+    # Una semana antes del último viernes
+    week_before_friday = (today - timedelta(days=days_since_friday+7)).strftime("%Y-%m-%d")
+    
+    logger.info(f"Analizando mensajes desde {week_before_friday} hasta {last_friday}")
+    
+    # Comando a probar con fechas específicas
     command = [
         "poetry", "run", "samuelize", "slack", 
         channel_id,
         "--token", slack_token,
         "--api_key", api_key,
+        "--start-date", week_before_friday,
+        "--end-date", last_friday,
         "--output", output_file
     ]
     
@@ -206,6 +225,25 @@ def main():
     if not slack_token:
         logger.error("No se proporcionó token de Slack. Use --slack-token o establezca SLACK_TOKEN")
         return 1
+    
+    # Si no se proporciona un canal específico, intentar obtener uno válido
+    if not slack_channel and slack_token:
+        try:
+            # Ejecutar comando para listar canales
+            list_cmd = ["poetry", "run", "samuelize", "slack", "--list-channels", "--token", slack_token]
+            exit_code, stdout, stderr = run_command(list_cmd, timeout=60)
+            
+            if exit_code == 0 and stdout:
+                # Buscar un canal público en la salida
+                import re
+                channel_matches = re.findall(r'#([a-z0-9_-]+) \(ID: (C[A-Z0-9]+)\)', stdout)
+                if channel_matches:
+                    # Usar el primer canal encontrado
+                    channel_name, channel_id = channel_matches[0]
+                    logger.info(f"Usando canal encontrado automáticamente: #{channel_name} (ID: {channel_id})")
+                    slack_channel = channel_id
+        except Exception as e:
+            logger.warning(f"No se pudo obtener un canal automáticamente: {e}")
     
     # Resultados de las pruebas
     results = {}
