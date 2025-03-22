@@ -3,6 +3,7 @@ import unittest
 import tempfile
 import shutil
 import logging
+import click
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 
