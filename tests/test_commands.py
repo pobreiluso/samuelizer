@@ -63,10 +63,13 @@ class TestSamuelize(unittest.TestCase):
                 with open("test_video.mp4", "wb") as f:
                     f.write(b"test data")
                 
-                # Ejecutar el comando con --local para evitar usar OpenAI
+                # Ejecutar el comando con contexto que incluye la opción local
+                ctx = click.Context(transcribe_media)
+                ctx.obj = {'local': True, 'whisper_size': 'base', 'text_model': 'facebook/bart-large-cnn'}
                 result = runner.invoke(
                     transcribe_media, 
-                    ["test_video.mp4", "--local", "--output", "output.docx"]
+                    ["test_video.mp4", "--output", "output.docx"],
+                    obj=ctx.obj
                 )
                 
                 # Verificar que no hubo errores
@@ -107,9 +110,12 @@ class TestSamuelize(unittest.TestCase):
             mock_save.return_value = os.path.join(self.test_dir, "output.docx")
             
             # Ejecutar comando con argumentos simulados
+            ctx = click.Context(analyze_slack_messages)
+            ctx.obj = {'local': True, 'whisper_size': 'base', 'text_model': 'facebook/bart-large-cnn'}
             result = runner.invoke(
                 analyze_slack_messages, 
-                ["C123456", "--token", "test_token", "--local"]
+                ["C123456", "--token", "test_token"],
+                obj=ctx.obj
             )
             
             # Verificar que no hubo errores

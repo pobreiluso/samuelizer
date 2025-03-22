@@ -42,35 +42,42 @@ def run_command(command, expected_success=True, timeout=None):
             command_str = command
         else:
             command_str = " ".join(command)
-            
-        result = subprocess.run(
+        
+        # Usar PIPE para stdout y stderr para capturar la salida
+        # pero también mostrarla en tiempo real para debugging
+        process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            timeout=timeout,
             shell=isinstance(command, str)
         )
         
-        logger.info(f"Código de salida: {result.returncode}")
+        # Capturar la salida con timeout
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+            exit_code = process.returncode
+        except subprocess.TimeoutExpired:
+            # Matar el proceso si excede el timeout
+            process.kill()
+            logger.error(f"Tiempo de espera agotado para el comando: {command_str}")
+            return -1, "", "Timeout"
+        logger.info(f"Código de salida: {exit_code}")
         
-        if result.stdout:
-            logger.debug(f"Salida estándar:\n{result.stdout}")
+        if stdout:
+            logger.debug(f"Salida estándar:\n{stdout}")
         
-        if result.stderr:
-            log_level = logging.WARNING if result.returncode != 0 else logging.DEBUG
-            logger.log(log_level, f"Salida de error:\n{result.stderr}")
+        if stderr:
+            log_level = logging.WARNING if exit_code != 0 else logging.DEBUG
+            logger.log(log_level, f"Salida de error:\n{stderr}")
             
-        if expected_success and result.returncode != 0:
+        if expected_success and exit_code != 0:
             logger.error(f"El comando falló inesperadamente: {command_str}")
-        elif not expected_success and result.returncode == 0:
+        elif not expected_success and exit_code == 0:
             logger.warning(f"El comando tuvo éxito inesperadamente: {command_str}")
             
-        return result.returncode, result.stdout, result.stderr
+        return exit_code, stdout, stderr
         
-    except subprocess.TimeoutExpired:
-        logger.error(f"Tiempo de espera agotado para el comando: {command_str}")
-        return -1, "", "Timeout"
     except Exception as e:
         logger.error(f"Error al ejecutar el comando {command_str}: {e}")
         return -2, "", str(e)
@@ -133,11 +140,12 @@ def test_slack_summary(slack_token, api_key):
         "--start-date", yesterday,
         "--end-date", today,
         "--output", output_file,
-        "--min-messages", "1"  # Reducir el mínimo para pruebas
+        "--min-messages", "1",  # Reducir el mínimo para pruebas
+        "--max-channels", "3"   # Limitar a 3 canales para que sea más rápido
     ]
     
-    # Ejecutar comando
-    exit_code, stdout, stderr = run_command(command, timeout=600)  # 10 minutos máximo
+    # Ejecutar comando con timeout más corto para evitar bloqueos
+    exit_code, stdout, stderr = run_command(command, timeout=180)  # 3 minutos máximo
     
     # Verificar si se creó el archivo de salida
     if exit_code == 0 and os.path.exists(output_file):

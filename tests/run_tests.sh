@@ -25,7 +25,13 @@ fi
 echo -e "${YELLOW}Verificando dependencias...${NC}"
 poetry install
 
-# Ejecutar pruebas unitarias
+# Cargar variables de entorno para pruebas si existe el archivo
+if [ -f ".env.test" ]; then
+    echo -e "${GREEN}Cargando variables de entorno para pruebas desde .env.test${NC}"
+    export $(grep -v '^#' .env.test | xargs)
+fi
+
+# Ejecutar pruebas unitarias con mock para evitar llamadas reales a APIs
 echo -e "${YELLOW}Ejecutando pruebas unitarias...${NC}"
 poetry run python -m unittest discover tests
 
@@ -58,6 +64,8 @@ fi
 if [ -z "$OPENAI_API_KEY" ]; then
     echo -e "${YELLOW}ADVERTENCIA: No se encontró OPENAI_API_KEY en el entorno${NC}"
     echo -e "${YELLOW}Algunas pruebas pueden fallar. Establece la variable de entorno OPENAI_API_KEY para pruebas completas.${NC}"
+    # Establecer una API key de prueba para evitar errores de autenticación
+    export OPENAI_API_KEY="sk-test-key-for-testing-purposes-only"
 fi
 
 # Verificar credenciales de Slack

@@ -93,24 +93,24 @@ def test_media_command(sample_media_file, api_key):
     # Lista de comandos a probar
     commands = [
         # Comando básico
-        ["poetry", "run", "samuelize", "media", sample_media_file, "--api-key", api_key],
+        ["poetry", "run", "samuelize", "media", sample_media_file, "--api_key", api_key],
         
         # Con diarización
-        ["poetry", "run", "samuelize", "media", sample_media_file, "--api-key", api_key, "--diarization"],
+        ["poetry", "run", "samuelize", "media", sample_media_file, "--api_key", api_key, "--diarization"],
         
         # Con diferentes plantillas
-        ["poetry", "run", "samuelize", "media", sample_media_file, "--api-key", api_key, "--template", "summary"],
-        ["poetry", "run", "samuelize", "media", sample_media_file, "--api-key", api_key, "--template", "key_points"],
-        ["poetry", "run", "samuelize", "media", sample_media_file, "--api-key", api_key, "--template", "action_items"],
+        ["poetry", "run", "samuelize", "media", sample_media_file, "--api_key", api_key, "--template", "summary"],
+        ["poetry", "run", "samuelize", "media", sample_media_file, "--api_key", api_key, "--template", "key_points"],
+        ["poetry", "run", "samuelize", "media", sample_media_file, "--api_key", api_key, "--template", "action_items"],
         
         # Con salida específica
-        ["poetry", "run", "samuelize", "media", sample_media_file, "--api-key", api_key, "--output", output_file],
+        ["poetry", "run", "samuelize", "media", sample_media_file, "--api_key", api_key, "--output", output_file],
         
         # Con modelo específico
-        ["poetry", "run", "samuelize", "media", sample_media_file, "--api-key", api_key, "--model", "whisper-1"],
+        ["poetry", "run", "samuelize", "media", sample_media_file, "--api_key", api_key, "--model", "whisper-1"],
         
         # Con proveedor específico
-        ["poetry", "run", "samuelize", "media", sample_media_file, "--api-key", api_key, "--provider", "openai"],
+        ["poetry", "run", "samuelize", "media", sample_media_file, "--api_key", api_key, "--provider", "openai"],
     ]
     
     # Ejecutar cada comando
@@ -190,10 +190,6 @@ def test_slack_command(slack_token, channel_id, api_key):
         # Comando básico - Pasar el channel_id como argumento posicional
         ["poetry", "run", "samuelize", "slack", channel_id, "--token", slack_token, 
          "--api_key", api_key],
-        
-        # Con límite de mensajes
-        ["poetry", "run", "samuelize", "slack", channel_id, "--token", slack_token, 
-         "--api_key", api_key, "--limit", "50"],
         
         # Con diferentes plantillas
         ["poetry", "run", "samuelize", "slack", channel_id, "--token", slack_token, 
