@@ -60,7 +60,7 @@ def cli(ctx, local, offline, whisper_size, text_model):
 @click.option('--max-size', default=100, help='Maximum audio file size in MB before applying more aggressive optimization')
 @click.option('--output-audio', help='Save optimized audio to a specific file', required=False, type=click.Path())
 @click.pass_context
-def transcribe_media(ctx, file_path, api_key, drive_url, optimize, output, template, diarization, no_cache, provider, model, keep_silence, max_size):
+def transcribe_media(ctx, file_path, api_key, drive_url, optimize, output, template, diarization, no_cache, provider, model, keep_silence, max_size, output_audio=None):
     # Obtener las opciones globales del contexto
     local = ctx.obj.get('local', False)
     whisper_size = ctx.obj.get('whisper_size', 'base')

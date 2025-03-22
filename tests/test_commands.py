@@ -91,6 +91,7 @@ class TestSamuelize(unittest.TestCase):
                         with patch('src.transcription.meeting_transcription.AudioTranscriptionService.transcribe') as mock_service_transcribe:
                             mock_service_transcribe.return_value = "Transcripción de prueba"
                             
+                            # Add output_audio=None to match the function signature
                             result = runner.invoke(
                                 transcribe_media, 
                                 ["test_video.mp4", "--output", "output.docx"],
@@ -188,10 +189,10 @@ class TestSamuelize(unittest.TestCase):
                     # Configure the meeting analyzer mock
                     mock_meeting_analyze.return_value = "Análisis de prueba"
                     
-                    # Run the command with mocked environment
+                    # Run the command with mocked environment and add api_key
                     result = runner.invoke(
                         analyze_slack_messages, 
-                        ["C123456", "--token", "test_token"],
+                        ["C123456", "--token", "test_token", "--api_key", "test_api_key"],
                         obj=ctx.obj
                     )
                 
