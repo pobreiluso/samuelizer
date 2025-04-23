@@ -564,10 +564,27 @@ def main():
         
         logging.info(f"Se han descargado {len(messages)} mensajes principales y {thread_count} mensajes de hilos")
         logging.info(f"Archivo guardado en: {output_file}")
+        
+        # Log the latest message file
+        logging.info(f"Latest message file: {output_file}")
+        
+        try:
+            # Si hay código aquí que intenta resumir los mensajes, asegúrate de que json esté disponible
+            # Por ejemplo, si hay algo como:
+            # summarize_messages(output_file)
+            pass
+        except Exception as summarize_error:
+            logging.error(f"Unexpected error while summarizing Slack messages: {str(summarize_error)}")
 
     except Exception as e:
         logging.error(f"Error durante la ejecución: {str(e)}")
         sys.exit(1)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        logging.error(f"Unhandled exception: {str(e)}")
+        logging.error(traceback.format_exc())
+        sys.exit(1)
