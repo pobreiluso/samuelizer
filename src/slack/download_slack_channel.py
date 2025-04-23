@@ -231,9 +231,10 @@ class SlackDownloader(SlackServiceInterface):
     def fetch_messages(self) -> List[Dict]:
         """
         Download all messages from the channel using pagination and date filters
+        Also downloads thread replies for messages that have threads
         
         Returns:
-            List[Dict]: List of message dictionaries
+            List[Dict]: List of message dictionaries with thread replies included
             
         Raises:
             RequestError: If there's an error in the HTTP request
@@ -308,6 +309,26 @@ class SlackDownloader(SlackServiceInterface):
 
                 messages = data["messages"]
                 processed_messages = [self.message_processor.process_message(msg) for msg in messages]
+                
+                # Buscar mensajes con hilos y descargar sus respuestas
+                for msg in processed_messages:
+                    # Un mensaje tiene hilo si tiene thread_ts o reply_count > 0
+                    has_thread = msg.get("thread_ts") is not None or msg.get("reply_count", 0) > 0
+                    
+                    if has_thread and not msg.get("thread_replies"):
+                        thread_ts = msg.get("thread_ts") or msg.get("ts")
+                        logging.info(f"Downloading thread for message {thread_ts}...")
+                        
+                        try:
+                            thread_messages = self.fetch_thread_messages(thread_ts)
+                            # Añadir las respuestas del hilo al mensaje original
+                            msg["thread_replies"] = thread_messages
+                            # Esperar un poco para evitar límites de tasa
+                            time.sleep(self.config.rate_limit_delay)
+                        except Exception as thread_e:
+                            logging.warning(f"Error downloading thread {thread_ts}: {str(thread_e)}")
+                            msg["thread_replies"] = []
+                
                 all_messages.extend(processed_messages)
                 logging.info(f"Downloaded {len(messages)} messages")
 
@@ -529,6 +550,9 @@ def main():
         # Download messages
         messages = downloader.fetch_messages()
         
+        # Count thread messages
+        thread_count = sum(len(msg.get("thread_replies", [])) for msg in messages)
+        
         # Save messages using the exporter
         output_file = exporter.export_messages(
             messages,
@@ -538,7 +562,7 @@ def main():
             end_date=config.end_date
         )
         
-        logging.info(f"Se han descargado {len(messages)} mensajes")
+        logging.info(f"Se han descargado {len(messages)} mensajes principales y {thread_count} mensajes de hilos")
         logging.info(f"Archivo guardado en: {output_file}")
 
     except Exception as e:
