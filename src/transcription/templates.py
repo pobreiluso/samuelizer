@@ -6,19 +6,23 @@ logger = logging.getLogger(__name__)
 class PromptTemplates:
     DEFAULT_TEMPLATES = {
         "summary": {
-            "system": "You are an AI summarize into a concise abstract paragraph.",
+            "system": "You are an AI specialized in creating concise, factual summaries that capture the essence of content.",
             "template": """
-            Analyze the following text and generate a concise summary that captures:
-            - The context and main purpose
-            - The most important points discussed
-            - Key conclusions or results
+            Create a concise summary of the following text:
+            
+            • Focus on the main topic and key information
+            • Use clear, direct language
+            • Maintain a neutral, factual tone
+            • Avoid redundancy and unnecessary details
+            • Organize information logically
             
             Text to analyze:
             {text}
             """,
             "parameters": {
-                "max_length": 500,
-                "style": "professional"
+                "max_length": 400,
+                "style": "concise",
+                "format": "paragraph"
             }
         },
         
@@ -79,78 +83,64 @@ class PromptTemplates:
         },
 
         "default": {
-            "system": "You are an AI specialized in creating concise and comprehensive summaries with a friendly and visually appealing format.",
+            "system": "You are an AI specialized in creating balanced, comprehensive summaries that capture the essence of any content type.",
             "template": """
-            Analyze the following text and generate a structured summary including:
+            Analyze the following text and generate a structured summary that captures the most relevant information:
 
-            📝 Executive Summary
-            • Capture the message essence in max 3 sentences
-            • Use clear and direct language
+            📝 **Main Topic**
+            • Identify the central topic or purpose
+            • Provide essential context
             
-            ⭐️ Key Points
-            • List only truly important points
-            • Each point must provide unique value
-            • Use bullets for better readability
+            💡 **Key Information**
+            • Extract the most important information
+            • Focus on facts, not opinions
+            • Prioritize unique and valuable insights
             
-            ✅ Action Items
-            • [ ] Concrete and actionable tasks
-            • [ ] Include @owner and 📅 deadline if mentioned
-            • [ ] Skip tasks without clear owner
-
-            💭 Sentiment
-            • General tone and relevant changes
-            • Only if it provides important context
-
-            Use markdown format to highlight important elements:
-            - Use **bold** for emphasis
-            - Use `code` for technical references
-            - Use > for important quotes
+            ✅ **Outcomes**
+            • Identify conclusions, decisions, or results
+            • Include action items only if explicitly mentioned
+            
+            Use markdown format for better readability.
+            Be concise but comprehensive.
             
             Text to analyze:
             {text}
             """,
             "parameters": {
-                "max_length": 800,
-                "style": "executive",
+                "max_length": 600,
+                "style": "balanced",
                 "format": "structured"
             }
         },
 
         "executive": {
-            "system": "You are an AI specialized in creating executive summaries with clear structure and visual appeal.",
+            "system": "You are an AI specialized in creating executive summaries focused on decisions and business impact.",
             "template": """
             Generate a structured executive summary:
 
-            🎯 Objective
-            • Main purpose of the meeting/document
+            🎯 **Purpose & Context**
+            • Main objective or background (1-2 sentences)
             
-            💡 Key Points
-            • Maximum 3 essential points
-            • **No unnecessary details**
+            💡 **Key Insights**
+            • 2-3 most important insights
+            • Focus on business relevance
             
-            ✨ Decisions
-            • List of important decisions
-            • Highlight the **impact** of each one
+            ✨ **Decisions & Outcomes**
+            • Concrete decisions made
+            • Expected impact of each decision
             
-            📋 Next Steps
-            • [ ] Concrete actions
-            • [ ] @Responsible persons
-            • [ ] 📅 Deadlines
+            📋 **Action Plan**
+            • Critical next steps
+            • Responsibilities and deadlines
             
-            🚀 Expected Impact
-            • Key results and benefits
-            • Relevant metrics
-            
-            Use markdown format to highlight important elements:
-            - Use **bold** for emphasis
-            - Use `code` for technical references
-            - Use > for important quotes
+            Use professional, direct language.
+            Prioritize actionable information.
             
             Text to analyze:
             {text}
             """,
             "parameters": {
-                "max_length": 800,
+                "max_length": 600,
                 "style": "executive",
                 "format": "structured"
             }
@@ -185,28 +175,25 @@ class PromptTemplates:
         },
 
         "slack_brief": {
-            "system": "You are an AI that creates ultra-concise Slack conversation summaries focusing only on decisions and actions.",
+            "system": "You are an AI specialized in extracting essential information from Slack conversations.",
             "template": """
-            Analyze this Slack conversation and generate an ultra-concise summary:
+            Extract only the essential information from this Slack conversation:
 
-            📍 **TL;DR**
-            • The essence in one sentence
-
-            🎯 **Decisions**
+            📍 **Topic**
+            • The main subject in one sentence
+            
+            ✅ **Decisions**
             • Only final decisions made
-            • No context or discussions
-
-            ⚡️ **Pending**
-            • [ ] Only tasks NOT completed
-            • [ ] With @responsible person if available
-
-            Rules:
-            - Maximum brevity
-            - Only CRITICAL info
-            - Ignore discussions/debates
-            - Omit everything that is not a decision/action
-            - Use emojis strategically
-
+            • No discussion context
+            
+            ⚡️ **Actions**
+            • Only concrete tasks assigned
+            • Include who is responsible
+            
+            Use extreme brevity.
+            Include only critical information.
+            Preserve @mentions and #channels.
+            
             Text to analyze:
             {text}
             """,
@@ -267,118 +254,79 @@ class PromptTemplates:
         },
 
         "one_to_one": {
-            "system": "You are an AI specialized in analyzing and summarizing 1:1 meetings with Tech Leads.",
+            "system": "You are an AI specialized in analyzing 1:1 meetings with focus on personal development and career growth.",
             "template": """
-            Analyze this 1:1 meeting and provide a structured summary following this format:
+            Analyze this 1:1 meeting and provide a structured summary:
 
-            🚦 **Daily Challenges & Blockers**
-            • Technical and process blockers
-            • Time management issues
-            • Team coordination challenges
-
-            🎯 **Team Performance**
-            • Current team status
-            • Key achievements
-            • Areas needing attention
-
-            📋 **Resource Needs**
-            • Tools and resources required
-            • Training needs
-            • Support requirements
-
-            💡 **Improvement Areas**
-            • Process improvements
-            • Technical improvements
-            • Team dynamics improvements
-
-            👥 **Guild & Career Development**
-            • Guild participation and impact
-            • Training progress and plans
-            • Career path discussion
-            • Knowledge sharing initiatives
-
-            👤 **Personal Development**
-            • Salary expectations
-            • Career expectations
-            • Work-life balance
-            • Job satisfaction
-
-            ⚡️ **Action Items**
-            • [ ] Concrete next steps
-            • [ ] Assigned responsibilities
-            • [ ] Follow-up items
-
-            Use markdown format to highlight important elements:
-            - Use **bold** for emphasis
-            - Use > for important quotes
-            - Use bullet points for better readability
-
+            🚦 **Current Challenges**
+            • Personal and professional blockers
+            • Areas where support is needed
+            
+            💡 **Growth & Development**
+            • Career aspirations discussed
+            • Skills development and learning opportunities
+            • Feedback received or given
+            
+            🎯 **Performance & Goals**
+            • Progress on personal objectives
+            • Achievements and recognition
+            • Areas for improvement
+            
+            ⚡️ **Personal Action Items**
+            • Specific commitments made
+            • Resources or support requested
+            • Follow-up items
+            
+            Use markdown format for better readability.
+            Focus on the individual's perspective and needs.
+            
             Text to analyze:
             {text}
             """,
             "parameters": {
-                "max_length": 800,
-                "style": "structured",
-                "format": "detailed",
+                "max_length": 700,
+                "style": "supportive",
+                "format": "structured",
                 "include_action_items": True
             }
         },
 
         "brainstorming": {
-            "system": "You are an AI specialized in capturing and organizing ideas from chaotic brainstorming sessions where multiple people speak simultaneously and ideas flow rapidly without structure.",
+            "system": "You are an AI specialized in capturing and organizing ideas from creative brainstorming sessions.",
             "template": """
-            Analyze this brainstorming session and extract all valuable ideas, even those mentioned briefly or incompletely. Organize them in the following format:
+            Analyze this brainstorming session and extract all valuable ideas:
 
-            🌟 **Core Problem/Challenge**
-            • Identify the central problem or challenge being addressed
-            • Include context if available
-
-            💭 **All Ideas Captured** (don't miss any, even partial ones)
-            • Idea 1: [Brief description]
-            • Idea 2: [Brief description]
-            • ...
-            • Include even half-formed or interrupted ideas
-            • Capture ideas even when people talk over each other
-
+            🎯 **Challenge/Opportunity**
+            • The central problem or opportunity being addressed
+            
+            💭 **Ideas Generated**
+            • Capture ALL ideas mentioned, even briefly
+            • Include partial or undeveloped concepts
+            • Preserve the creative intent of each idea
+            
             🔍 **Idea Categories**
-            Group similar ideas into 3-5 categories such as:
+            • Group similar ideas into 3-5 logical categories
+            • Name each category to reflect its theme
+            • List related ideas under each category
             
-            **Category 1: [Name]**
-            • Related idea 1
-            • Related idea 2
+            💎 **Promising Concepts**
+            • Identify ideas that received positive reactions
+            • Note ideas with potential for immediate implementation
+            • Highlight particularly innovative approaches
             
-            **Category 2: [Name]**
-            • Related idea 3
-            • Related idea 4
-
-            💎 **Standout Concepts**
-            • Most innovative ideas
-            • Ideas that received positive reactions
-            • Unique approaches mentioned
-
-            🔄 **Potential Combinations**
-            • Identify ideas that could be combined for greater impact
-            • Note complementary concepts
-
-            ⚡️ **Next Steps**
-            • Suggested actions to develop promising ideas
-            • Areas requiring further brainstorming
-            • Potential prototypes or tests
-
-            Important guidelines:
-            - Capture ALL ideas, even those that seem incomplete or were interrupted
-            - Don't filter out "bad ideas" - in brainstorming, all ideas have potential value
-            - Pay attention to emotional reactions to ideas (excitement, agreement, etc.)
-            - Note when ideas build upon each other
-            - Preserve the creative essence of ideas even when they're expressed chaotically
-            - Use simple language to describe complex ideas
-
+            🔄 **Synthesis Opportunities**
+            • Identify complementary ideas that could be combined
+            • Note potential evolution paths for promising ideas
+            
+            Use markdown format for better readability.
+            Focus on capturing the creative essence without judgment.
+            
             Text to analyze:
             {text}
             """,
             "parameters": {
-                "max_length": 1200,
-                "style": "comprehensive",
+                "max_length": 1000,
+                "style": "creative",
                 "format": "structured",
                 "preserve_all_ideas": True,
                 "categorize_ideas": True
@@ -386,47 +334,45 @@ class PromptTemplates:
         },
 
         "weekly_sync": {
-            "system": "You are an AI specialized in analyzing and summarizing weekly team sync meetings.",
+            "system": "You are an AI specialized in analyzing team progress meetings with focus on project advancement and coordination.",
             "template": """
-            Analyze this weekly sync meeting and provide a structured summary following this format:
+            Analyze this team sync meeting and provide a structured summary:
 
-            📅 **Last Week's Achievements**
-            • List completed tasks and milestones
-            • Highlight significant progress
-            • Note any resolved issues
-            • Include metrics when available
-
-            📋 **This Week's Plan**
-            • Outline planned tasks and goals
-            • Prioritize key deliverables
-            • Mention ongoing projects
-            • Include deadlines if specified
-
-            🚧 **Blockers & Risks**
-            • Current blockers
-            • Potential risks
-            • Dependencies
+            📊 **Progress Overview**
+            • Key accomplishments since last meeting
+            • Status of ongoing initiatives
+            • Metrics and results mentioned
+            
+            🚧 **Challenges & Blockers**
+            • Current obstacles
             • Resource constraints
-
-            ⚡️ **Action Items**
-            • [ ] Concrete tasks with owners
-            • [ ] Follow-up items
-            • [ ] Decisions that need to be made
-            • [ ] Dependencies to be resolved
-
-            Use markdown format to highlight important elements:
-            - Use **bold** for emphasis
-            - Use > for important quotes
-            - Use bullet points for better readability
-            - Include @mentions for ownership
-
+            • Dependencies requiring attention
+            
+            🔄 **Coordination Points**
+            • Cross-team dependencies
+            • Handoffs and collaborations
+            • Communication needs
+            
+            📅 **Next Period Plan**
+            • Priorities for the coming week/sprint
+            • Upcoming deadlines and milestones
+            • Resource allocation decisions
+            
+            ⚡️ **Team Action Items**
+            • Specific tasks with owners
+            • Decisions requiring implementation
+            • Follow-up commitments
+            
+            Use markdown format for better readability.
+            Focus on team coordination and project advancement.
+            
             Text to analyze:
             {text}
             """,
             "parameters": {
                 "max_length": 800,
-                "style": "structured",
-                "format": "detailed",
+                "style": "practical",
+                "format": "structured",
                 "include_action_items": True
             }
         },
@@ -486,61 +432,44 @@ class PromptTemplates:
         },
 
         "technical_meeting": {
-            "system": "You are an AI specialized in analyzing technical meetings and discussions between engineers, developers, and technical stakeholders.",
+            "system": "You are an AI specialized in analyzing technical discussions with focus on architecture, implementation, and technical decisions.",
             "template": """
-            Analyze this technical meeting and provide a structured summary following this format:
+            Analyze this technical meeting and provide a structured summary:
 
             🔍 **Technical Context**
-            • Project/system being discussed
-            • Current state/version
-            • Technical constraints mentioned
-
-            🛠️ **Technical Issues Discussed**
+            • Systems/components under discussion
+            • Current state and constraints
+            • Technical objectives
+            
+            🛠️ **Technical Challenges**
             • Problems identified
-            • Root causes mentioned
-            • Technical debt highlighted
-            • Performance concerns
-
-            💻 **Code & Architecture**
+            • Technical limitations
+            • Performance or scalability concerns
+            
+            💻 **Solution Approaches**
+            • Proposed technical solutions
             • Architecture decisions
-            • Code changes proposed
-            • Design patterns mentioned
-            • Technical trade-offs discussed
-
-            🔧 **Technical Solutions**
-            • Proposed solutions
-            • Alternative approaches considered
             • Implementation strategies
-            • Technical requirements
-
-            📊 **Technical Metrics**
-            • Performance metrics mentioned
-            • Success criteria
-            • Benchmarks discussed
-            • Monitoring considerations
-
-            ⚙️ **Technical Dependencies**
-            • External systems/APIs
-            • Libraries/frameworks mentioned
-            • Infrastructure requirements
-            • Version compatibility issues
-
-            ⚡️ **Action Items**
-            • [ ] Technical tasks to be completed
-            • [ ] Research needed
-            • [ ] Proof of concepts to develop
-            • [ ] Technical documentation to update
-
-            Use markdown format to highlight important elements:
-            - Use **bold** for emphasis
-            - Use `code` for technical references, variable names, and code snippets
-            - Use > for important technical quotes or principles mentioned
-
+            • Trade-offs discussed
+            
+            📊 **Technical Criteria**
+            • Success metrics mentioned
+            • Non-functional requirements
+            • Testing and validation approaches
+            
+            ⚡️ **Technical Action Items**
+            • Implementation tasks
+            • Research or investigation needed
+            • Technical decisions pending
+            
+            Use markdown format with `code` for technical terms.
+            Focus on technical details and engineering decisions.
+            
             Text to analyze:
             {text}
             """,
             "parameters": {
-                "max_length": 1000,
+                "max_length": 900,
                 "style": "technical",
                 "format": "structured",
                 "include_code_references": True,
@@ -626,36 +555,36 @@ class PromptTemplates:
             Consider these aspects:
 
             1. Content Type:
-            - Is it a meeting? What kind? (1:1, team sync, presentation)
+            - Is it a meeting? What kind? (1:1, team sync, technical discussion)
             - Is it a Slack conversation?
-            - Is it a general document or transcript?
-            - Is it a brainstorming session?
+            - Is it a brainstorming session with multiple ideas?
+            - Is it a formal presentation or announcement?
 
             2. Content Structure:
             - How formal/informal is it?
             - Is it structured or free-flowing?
             - Are there clear sections or topics?
-            - Is it chaotic with multiple people speaking simultaneously?
+            - Is it chaotic with multiple people speaking?
 
-            3. Content Elements:
-            - Are there action items?
-            - Are there decisions made?
-            - Is there technical discussion?
-            - Is there personal/career discussion?
-            - Are there many ideas being generated rapidly?
+            3. Content Focus:
+            - Is it focused on personal development? (one_to_one)
+            - Is it focused on team progress? (weekly_sync)
+            - Is it focused on technical details? (technical_meeting)
+            - Is it focused on generating ideas? (brainstorming)
+            - Is it a brief exchange needing minimal context? (slack_brief)
+            - Is it a formal announcement? (press_conference)
+            - Is it a general discussion? (summary or default)
 
             Available templates:
             - one_to_one: For 1:1 meetings with focus on personal/career development
             - weekly_sync: For team status updates and planning
-            - executive: For formal meetings with clear structure
-            - quick: For brief, informal discussions
+            - executive: For formal meetings with business decisions
+            - technical_meeting: For technical discussions and architecture
+            - brainstorming: For idea generation sessions
             - slack_brief: For Slack conversations needing minimal context
             - slack_detailed: For complex Slack discussions
             - summary: For general content requiring standard summary
-            - action_items: For content focused on tasks and actions
-            - sentiment: For content where tone and reactions matter
-            - press_conference: For press conferences and public announcements
-            - brainstorming: For chaotic idea generation sessions with multiple speakers and rapid idea flow
+            - default: For general content when no specific template fits
 
             Text to analyze:
             {text}
@@ -665,9 +594,6 @@ class PromptTemplates:
             
             explanation:
             [Brief explanation of why this template is most appropriate]
-            
-            considerations:
-            [Specific considerations for using this template]
             """
         }
     }
@@ -775,11 +701,19 @@ class PromptTemplates:
             # Calcular el factor de reducción
             reduction_factor = max_allowed_length / text_length
             
-            # Modificar el template para indicar que el texto fue truncado
+            # Crear un template optimizado para textos largos
+            template["system"] = f"{template['system']} You are analyzing a truncated text that represents {int(reduction_factor*100)}% of the original content."
+            
+            # Modificar el template para indicar estrategias de manejo de texto largo
             original_template = template["template"]
             template["template"] = f"""
-            NOTA: El texto original era demasiado largo ({text_length} caracteres) y ha sido truncado al {int(reduction_factor*100)}% para su análisis.
-            Analiza el texto truncado lo mejor posible, teniendo en cuenta que puede faltar información.
+            NOTA: El texto original era demasiado largo ({text_length} caracteres) y ha sido truncado para su análisis.
+            
+            Estrategias para analizar este texto truncado:
+            1. Enfócate en las secciones disponibles sin hacer suposiciones sobre el contenido faltante
+            2. Prioriza la información más relevante y accionable
+            3. Sé conciso y directo en tu análisis
+            4. Indica claramente si detectas que falta información crítica
             
             {original_template}
             """
