@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 import logging
 
 logger = logging.getLogger(__name__)
@@ -485,64 +485,66 @@ class PromptTemplates:
             }
         },
 
-        "brainstorming": {
-            "system": "You are an AI specialized in capturing and organizing ideas from brainstorming sessions where multiple people speak simultaneously and ideas flow rapidly without structure.",
+        "technical_meeting": {
+            "system": "You are an AI specialized in analyzing technical meetings and discussions between engineers, developers, and technical stakeholders.",
             "template": """
-            Analyze this brainstorming session and extract all valuable ideas, even those mentioned briefly or incompletely. Organize them in the following format:
+            Analyze this technical meeting and provide a structured summary following this format:
 
-            🌟 **Core Problem/Challenge**
-            • Identify the central problem or challenge being addressed
-            • Include context if available
+            🔍 **Technical Context**
+            • Project/system being discussed
+            • Current state/version
+            • Technical constraints mentioned
 
-            💭 **All Ideas Captured** (don't miss any, even partial ones)
-            • Idea 1: [Brief description]
-            • Idea 2: [Brief description]
-            • ...
-            • Include even half-formed or interrupted ideas
-            • Capture ideas even when people talk over each other
+            🛠️ **Technical Issues Discussed**
+            • Problems identified
+            • Root causes mentioned
+            • Technical debt highlighted
+            • Performance concerns
 
-            🔍 **Idea Categories**
-            Group similar ideas into 3-5 categories such as:
-            
-            **Category 1: [Name]**
-            • Related idea 1
-            • Related idea 2
-            
-            **Category 2: [Name]**
-            • Related idea 3
-            • Related idea 4
+            💻 **Code & Architecture**
+            • Architecture decisions
+            • Code changes proposed
+            • Design patterns mentioned
+            • Technical trade-offs discussed
 
-            💎 **Standout Concepts**
-            • Most innovative ideas
-            • Ideas that received positive reactions
-            • Unique approaches mentioned
+            🔧 **Technical Solutions**
+            • Proposed solutions
+            • Alternative approaches considered
+            • Implementation strategies
+            • Technical requirements
 
-            🔄 **Potential Combinations**
-            • Identify ideas that could be combined for greater impact
-            • Note complementary concepts
+            📊 **Technical Metrics**
+            • Performance metrics mentioned
+            • Success criteria
+            • Benchmarks discussed
+            • Monitoring considerations
 
-            ⚡️ **Next Steps**
-            • Suggested actions to develop promising ideas
-            • Areas requiring further brainstorming
-            • Potential prototypes or tests
+            ⚙️ **Technical Dependencies**
+            • External systems/APIs
+            • Libraries/frameworks mentioned
+            • Infrastructure requirements
+            • Version compatibility issues
 
-            Important guidelines:
-            - Capture ALL ideas, even those that seem incomplete or were interrupted
-            - Don't filter out "bad ideas" - in brainstorming, all ideas have potential value
-            - Pay attention to emotional reactions to ideas (excitement, agreement, etc.)
-            - Note when ideas build upon each other
-            - Preserve the creative essence of ideas even when they're expressed chaotically
-            - Use simple language to describe complex ideas
+            ⚡️ **Action Items**
+            • [ ] Technical tasks to be completed
+            • [ ] Research needed
+            • [ ] Proof of concepts to develop
+            • [ ] Technical documentation to update
+
+            Use markdown format to highlight important elements:
+            - Use **bold** for emphasis
+            - Use `code` for technical references, variable names, and code snippets
+            - Use > for important technical quotes or principles mentioned
 
             Text to analyze:
             {text}
             """,
             "parameters": {
-                "max_length": 1200,
-                "style": "comprehensive",
+                "max_length": 1000,
+                "style": "technical",
                 "format": "structured",
-                "preserve_all_ideas": True,
-                "categorize_ideas": True
+                "include_code_references": True,
+                "include_action_items": True
             }
         },
         
@@ -683,14 +685,32 @@ class PromptTemplates:
     def get_template(self, template_name: str, **kwargs) -> dict:
         """Obtiene un template con parámetros personalizados"""
         if template_name not in self.templates:
-            raise ValueError(f"Template '{template_name}' no encontrado")
+            logger.warning(f"Template '{template_name}' no encontrado. Usando template 'default'.")
+            template_name = "default"
+            
+        # Crear una clave de caché basada en el nombre del template y los parámetros
+        cache_key = f"{template_name}_{hash(frozenset(kwargs.items()))}"
+        
+        # Verificar si el template ya está en caché
+        if cache_key in self._template_cache:
+            return self._template_cache[cache_key]
             
         template = self.templates[template_name].copy()
+        
+        # Crear una copia profunda de los parámetros para evitar modificar el original
+        template["parameters"] = template["parameters"].copy()
         
         # Actualizar parámetros con los proporcionados
         template["parameters"].update(kwargs)
         
+        # Guardar en caché
+        self._template_cache[cache_key] = template
+        
         return template
+        
+    def get_template_names(self) -> List[str]:
+        """Obtiene la lista de nombres de templates disponibles"""
+        return list(self.templates.keys())
 
     def add_custom_template(self, name: str, template: dict):
         """Añade un nuevo template personalizado"""
@@ -698,18 +718,74 @@ class PromptTemplates:
         if not all(key in template for key in required_keys):
             raise ValueError(f"El template debe contener: {required_keys}")
             
-        self.custom_templates[name] = template
-        self.templates[name] = template
+        self._custom_templates[name] = template
+        self._templates[name] = template
+        
+        # Limpiar caché cuando se añade un nuevo template
+        self._template_cache = {}
+        
+        return True
 
     def modify_template(self, name: str, modifications: dict):
         """Modifica un template existente"""
-        if name not in self.templates:
+        if name not in self._templates:
             raise ValueError(f"Template '{name}' no encontrado")
             
-        template = self.templates[name]
+        # Crear una copia del template para evitar modificar el original
+        template = self._templates[name].copy()
+        
+        # Aplicar modificaciones
         for key, value in modifications.items():
             if key in template:
-                if isinstance(template[key], dict):
+                if isinstance(template[key], dict) and isinstance(value, dict):
+                    # Crear una copia del diccionario para evitar modificar el original
+                    template[key] = template[key].copy()
                     template[key].update(value)
                 else:
                     template[key] = value
+        
+        # Actualizar el template
+        self._templates[name] = template
+        
+        # Si es un template personalizado, actualizar también en custom_templates
+        if name in self._custom_templates:
+            self._custom_templates[name] = template
+            
+        # Limpiar caché cuando se modifica un template
+        self._template_cache = {}
+        
+        return True
+        
+    def optimize_template_for_length(self, template_name: str, text_length: int, max_allowed_length: int = 15000) -> dict:
+        """
+        Optimiza un template para manejar textos largos
+        
+        Args:
+            template_name: Nombre del template a optimizar
+            text_length: Longitud del texto a analizar
+            max_allowed_length: Longitud máxima permitida para el modelo
+            
+        Returns:
+            dict: Template optimizado
+        """
+        template = self.get_template(template_name)
+        
+        # Si el texto es demasiado largo, ajustar el template
+        if text_length > max_allowed_length:
+            # Calcular el factor de reducción
+            reduction_factor = max_allowed_length / text_length
+            
+            # Modificar el template para indicar que el texto fue truncado
+            original_template = template["template"]
+            template["template"] = f"""
+            NOTA: El texto original era demasiado largo ({text_length} caracteres) y ha sido truncado al {int(reduction_factor*100)}% para su análisis.
+            Analiza el texto truncado lo mejor posible, teniendo en cuenta que puede faltar información.
+            
+            {original_template}
+            """
+            
+            # Ajustar parámetros para textos largos
+            template["parameters"]["max_length"] = min(template["parameters"].get("max_length", 800), 500)
+            template["parameters"]["style"] = "concise"
+            
+        return template
