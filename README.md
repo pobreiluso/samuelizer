@@ -261,7 +261,7 @@ This project is licensed under the [MIT License](LICENSE). The MIT License was c
 
 - **ajerez** –  
   Email: [pobreiluso@gmail.com](mailto:pobreiluso@gmail.com)  
-  [GitHub](https://github.com/ajerez) | [LinkedIn](https://www.linkedin.com/in/ajerez/)
+  [GitHub](https://github.com/pobreiluso) | [LinkedIn](https://www.linkedin.com/in/ajerezguillen/)
 
 If you have any questions, suggestions, or would like to contribute further, please feel free to get in touch.
 
