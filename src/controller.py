@@ -45,9 +45,9 @@ def run_transcription(api_key: str, file_path: str, diarization: bool, use_cache
             optimized_path = os.path.join(dir_path, optimized_files[0])
             
             # Preguntar al usuario si desea usar la versión optimizada existente
-            use_optimized = input(f"Se encontró una versión optimizada del audio ({optimized_files[0]}). ¿Usarla? (yes/no): ").lower().strip()
+            use_optimized = input(f"Found an optimized audio version ({optimized_files[0]}). Use it? (yes/no): ").lower().strip()
             if use_optimized in ['y', 'yes', 's', 'si', 'sí']:
-                logger.info(f"Usando archivo de audio optimizado existente: {optimized_path}")
+                logger.info(f"Using existing optimized audio file: {optimized_path}")
                 audio_file = optimized_path
             else:
                 # Si el usuario no quiere usar la versión optimizada existente, optimizar de nuevo
@@ -85,16 +85,16 @@ def run_transcription(api_key: str, file_path: str, diarization: bool, use_cache
         }
         
         if cache_service.has_cached_transcription(audio_file, transcription_options):
-            use_cached = input("Se encontró una transcripción en caché. ¿Usarla? (yes/no): ").lower().strip()
+            use_cached = input("Found a cached transcription. Use it? (yes/no): ").lower().strip()
             if use_cached in ['y', 'yes', 's', 'si', 'sí']:
-                logger.info("Usando transcripción en caché...")
+                logger.info("Using cached transcription...")
                 cached_transcription = cache_service.get_cached_transcription(audio_file, transcription_options)
                 if cached_transcription:
                     return cached_transcription
                 else:
-                    logger.warning("No se pudo recuperar la transcripción en caché. Procediendo con nueva transcripción.")
+                    logger.warning("Could not retrieve cached transcription. Proceeding with new transcription.")
             else:
-                logger.info("El usuario eligió no usar la transcripción en caché. Procediendo con nueva transcripción.")
+                logger.info("User chose not to use cached transcription. Proceeding with new transcription.")
                 # Desactivar caché para esta ejecución si el usuario no quiere usarla
                 use_cache = False
 

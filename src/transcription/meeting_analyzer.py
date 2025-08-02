@@ -1,18 +1,17 @@
 from docx import Document
 import logging
 import os
-import openai
 from typing import Optional, List, Dict, Any
 from src.transcription.exceptions import AnalysisError
 from src.interfaces import TranscriptionService, TextAnalysisModelInterface
 from .templates import PromptTemplates
-from src.models.model_factory import ModelProviderFactory
+from src.analysis.client import AnalysisClient
+from src.transcription.text_preprocessor import TextPreprocessor
 
 logger = logging.getLogger(__name__)
 
-from src.transcription.text_preprocessor import TextPreprocessor
 
-class AnalysisClient:
+class DeprecatedAnalysisClient:
     """
     Cliente de análisis que utiliza el proveedor de modelos configurado.
     Maneja diferentes tipos de modelos (chat y completions).

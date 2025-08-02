@@ -69,7 +69,7 @@ def _configure_provider_from_context(ctx, provider, api_key, model=None):
 @click.pass_context
 def cli(ctx, local, offline, whisper_size, text_model):
     """Samuelizer - AI-powered summarization tool."""
-    # Guardar las opciones en el contexto para que estén disponibles en todos los comandos
+    # Store options in context to make them available in all commands
     ctx.ensure_object(dict)
     ctx.obj['local'] = local or offline
     ctx.obj['whisper_size'] = whisper_size
@@ -403,7 +403,7 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                 # Es un enlace de Slack, extraer el ID del canal y posiblemente el timestamp
                 channel_id, link_thread_ts = parse_slack_link(channel_id_or_link)
                 if not channel_id:
-                    logging.error("Enlace de Slack inválido. No se pudo extraer el ID del canal.")
+                    logging.error("Invalid Slack link. Could not extract channel ID.")
                     sys.exit(1)
             
                 # Si se encontró un timestamp en el enlace y no se especificó --thread-ts, usarlo
@@ -455,7 +455,7 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                 total_channels = len(enriched_channels)
                 if total_channels > 100:
                     logger.info(f"Se detectaron {total_channels} canales. Para analizar todos, use --max-channels 0")
-                    logger.info(f"Para limitar el análisis a un número específico, use --max-channels N")
+                    logger.info(f"To limit analysis to a specific number, use --max-channels N")
                 
                 # Formatear para mostrar
                 formatted_text = channel_lister.format_channels_for_display(enriched_channels)
@@ -494,7 +494,7 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                 
                 # Verificar que el token no esté vacío
                 if not token:
-                    logger.error("No se proporcionó un token de Slack. Usa --token o establece la variable de entorno SLACK_TOKEN.")
+                    logger.error("No Slack token provided. Use --token or set the SLACK_TOKEN environment variable.")
                     sys.exit(1)
                 
                 # Paso 1: Listar todos los canales accesibles
@@ -504,9 +504,9 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                     channels = channel_lister.list_channels(include_private=include_private, include_archived=False)
                 except SlackAPIError as e:
                     if "invalid_auth" in str(e):
-                        logger.error("Error de autenticación con Slack. Verifica que tu token sea válido y tenga los permisos necesarios.")
-                        logger.info("Si estás usando un token de usuario (xoxp), asegúrate de que no haya expirado.")
-                        logger.info("Si estás usando un token de bot (xoxb), asegúrate de que el bot esté instalado en el workspace.")
+                        logger.error("Slack authentication error. Verify that your token is valid and has necessary permissions.")
+                        logger.info("If using a user token (xoxp), ensure it has not expired.")
+                        logger.info("If using a bot token (xoxb), ensure the bot is installed in the workspace.")
                     raise
                 
                 # Enriquecer la información de los canales
@@ -533,13 +533,13 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                 
                 # Limitar el número de canales si se especificó
                 if max_channels > 0 and len(member_channels) > max_channels:
-                    logger.info(f"Limitando análisis a {max_channels} canales (de {len(member_channels)} disponibles)")
+                    logger.info(f"Limiting analysis to {max_channels} channels (of {len(member_channels)} available)")
                     member_channels = member_channels[:max_channels]
                 else:
                     logger.info(f"Analizando todos los {len(member_channels)} canales disponibles")
                 
                 # Añadir mensaje de depuración para verificar el número real de canales
-                logger.info(f"Número real de canales a analizar: {len(member_channels)}")
+                logger.info(f"Actual number of channels to analyze: {len(member_channels)}")
                 
                 logger.info(f"Analizando canales en el rango de fechas: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
                 
@@ -655,7 +655,7 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                                 
                                 logger.info(f"Canal {channel_name} ({channel_id}): {len(messages)} mensajes")
                             else:
-                                logger.info(f"Canal {channel_name} ({channel_id}): solo {len(messages)} mensajes (mínimo: {min_messages})")
+                                logger.info(f"Channel {channel_name} ({channel_id}): only {len(messages)} messages (minimum: {min_messages})")
                 
                 if not all_messages:
                     logger.error("No se encontraron mensajes en el rango de fechas especificado.")
@@ -700,7 +700,7 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                 # Limitamos a un número manejable de mensajes para evitar exceder límites de tokens
                 max_messages_for_analysis = 1000
                 if len(all_messages) > max_messages_for_analysis:
-                    logger.warning(f"Limitando análisis a {max_messages_for_analysis} mensajes (de {len(all_messages)} totales)")
+                    logger.warning(f"Limiting analysis to {max_messages_for_analysis} messages (of {len(all_messages)} total)")
                     # Seleccionar mensajes distribuidos uniformemente
                     step = len(all_messages) // max_messages_for_analysis
                     selected_messages = all_messages[::step]
@@ -739,7 +739,7 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
                 
                 # Mostrar resultados
                 click.echo("\n=== Resumen Global de Slack ===")
-                click.echo(f"Período: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
+                click.echo(f"Period: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
                 click.echo(f"Canales analizados: {len(channel_messages)}")
                 click.echo(f"Total de mensajes: {len(all_messages)}")
                 click.echo("\n" + result)
@@ -999,8 +999,8 @@ def clear_cache(confirm):
     on subsequent transcription requests.
     """
     if not confirm:
-        if not click.confirm('¿Estás seguro de que quieres borrar toda la caché de transcripciones?'):
-            click.echo("Operación cancelada.")
+        if not click.confirm('Are you sure you want to clear all transcription cache?'):
+            click.echo("Operation cancelled.")
             return
     
     try:
@@ -1013,9 +1013,9 @@ def clear_cache(confirm):
         # Limpiar toda la caché
         cache_service.clear_all_cache()
         
-        click.echo("Caché de transcripciones borrada correctamente.")
+        click.echo("Transcription cache cleared successfully.")
     except Exception as e:
-        logger.error(f"Error al limpiar la caché: {e}")
+        logger.error(f"Error clearing cache: {e}")
         sys.exit(1)
 
 
