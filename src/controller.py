@@ -15,15 +15,15 @@ from src.exporters.json_exporter import JSONExporter
 from src.config.config import Config
 from src.transcription.cache import FileCache, TranscriptionCacheService
 from src.models.model_factory import ModelProviderFactory
+from src.config.provider_manager import ProviderConfigurationManager
 
 logger = logging.getLogger(__name__)
 
 def run_transcription(api_key: str, file_path: str, diarization: bool, use_cache: bool = True,
                      provider_name: str = "openai", model_id: str = "whisper-1", 
                      force_new_transcription: bool = False) -> str:
-    # Configurar la clave API para el proveedor seleccionado
-    if provider_name.lower() == "openai":
-        os.environ["OPENAI_API_KEY"] = api_key
+    # Configure provider using centralized manager
+    ProviderConfigurationManager.setup_environment(provider_name, api_key)
 
     # If file is not MP3, extract audio from video
     if not file_path.lower().endswith('.mp3'):
@@ -120,15 +120,12 @@ def run_transcription(api_key: str, file_path: str, diarization: bool, use_cache
 
 def run_analysis(transcription: str, provider_name: str = "openai", 
                 model_id: str = "gpt-3.5-turbo", api_key: str = None) -> dict:
-    # Configurar la clave API para el proveedor seleccionado
-    if provider_name.lower() == "openai" and api_key:
-        os.environ["OPENAI_API_KEY"] = api_key
+    # Configure provider using centralized manager
+    ProviderConfigurationManager.setup_environment(provider_name, api_key)
         
-    # Crear el cliente de análisis con el proveedor seleccionado
-    analysis_client = AnalysisClient(
-        provider_name=provider_name,
-        api_key=api_key,
-        model_id=model_id
+    # Create analysis client using centralized manager
+    analysis_client = ProviderConfigurationManager.create_analysis_client(
+        provider_name, api_key, model_id
     )
     
     analyzer = MeetingAnalyzer(
