@@ -26,9 +26,40 @@ from src.transcription.exceptions import MeetingMinutesError
 from src.utils.audio_extractor import AudioExtractor
 
 from src.utils.logging_utils import setup_logging
+from src.utils.provider_helper import ProviderConfigHelper
+from src.exceptions import ProviderConfigurationError
 
 # Configure logging
 logger = setup_logging('cli_agent.log')
+
+def _configure_provider_from_context(ctx, provider, api_key, model=None):
+    """
+    Configure provider settings from context and parameters.
+    Reduces code duplication across CLI commands.
+    """
+    local = ctx.obj.get('local', False)
+    whisper_size = ctx.obj.get('whisper_size', 'base')
+    text_model = ctx.obj.get('text_model', 'facebook/bart-large-cnn')
+    
+    try:
+        config = ProviderConfigHelper.configure_provider(
+            provider=provider,
+            api_key=api_key,
+            local=local,
+            whisper_size=whisper_size,
+            text_model=text_model
+        )
+        
+        # Override model if specifically provided
+        if model and not local:
+            config['model_id'] = model
+            
+        return config
+    except ProviderConfigurationError as e:
+        if 'API key is required' in str(e) and provider == 'openai':
+            api_key = click.prompt('OpenAI API key', hide_input=True)
+            return _configure_provider_from_context(ctx, provider, api_key, model)
+        raise
 
 @click.group()
 @click.option('--local', is_flag=True, help='Use local models instead of API-based ones')
@@ -61,20 +92,11 @@ def cli(ctx, local, offline, whisper_size, text_model):
 @click.option('--output-audio', help='Save optimized audio to a specific file', required=False, type=click.Path())
 @click.pass_context
 def transcribe_media(ctx, file_path, api_key, drive_url, optimize, output, template, diarization, no_cache, provider, model, keep_silence, max_size, output_audio=None):
-    # Obtener las opciones globales del contexto
-    local = ctx.obj.get('local', False)
-    whisper_size = ctx.obj.get('whisper_size', 'base')
-    text_model = ctx.obj.get('text_model', 'facebook/bart-large-cnn')
-    
-    # Si se especifica --local, usar el proveedor local
-    if local:
-        provider = "local"
-        model = whisper_size
-        # No se necesita API key para modelos locales
-        api_key = None
-        logger.info("Usando modelos locales para procesamiento (modo offline)")
-    elif not api_key and provider == "openai":
-        api_key = click.prompt('OpenAI API key', hide_input=True)
+    # Configure provider using helper
+    provider_config = _configure_provider_from_context(ctx, provider, api_key, model)
+    provider = provider_config['provider']
+    api_key = provider_config['api_key']
+    model = provider_config['model_id'] or model
     
     # Expandir la ruta del usuario
     file_path = os.path.expanduser(file_path)
@@ -105,14 +127,7 @@ def transcribe_media(ctx, file_path, api_key, drive_url, optimize, output, templ
         logger.error(f"Unsupported file format. Supported formats: {', '.join(supported_formats)}")
         sys.exit(1)
     try:
-        # Configurar el proveedor de IA
-        if provider.lower() == 'openai':
-            if not api_key:
-                logger.error("OpenAI API key not provided")
-                sys.exit(1)
-            os.environ["OPENAI_API_KEY"] = api_key
-            if hasattr(openai, 'api_key'):
-                openai.api_key = api_key
+        # Configure AI provider (already done by helper above)
             
         if drive_url:
             video_file = VideoDownloader.download_from_google_drive(drive_url)
@@ -237,19 +252,11 @@ def transcribe_media(ctx, file_path, api_key, drive_url, optimize, output, templ
 @click.option('--model', default='gpt-4', help='Model ID to use for analysis')
 @click.pass_context
 def summarize_text_command(ctx, text, api_key, output, template, params, provider, model):
-    # Obtener las opciones globales del contexto
-    local = ctx.obj.get('local', False)
-    text_model = ctx.obj.get('text_model', 'facebook/bart-large-cnn')
-    
-    # Si se especifica --local, usar el proveedor local
-    if local:
-        provider = "local"
-        model = text_model
-        # No se necesita API key para modelos locales
-        api_key = None
-        logger.info("Usando modelos locales para procesamiento (modo offline)")
-    elif not api_key and provider == "openai":
-        api_key = click.prompt('OpenAI API key', hide_input=True)
+    # Configure provider using helper
+    provider_config = _configure_provider_from_context(ctx, provider, api_key, model)
+    provider = provider_config['provider']
+    api_key = provider_config['api_key']
+    model = provider_config['model_id'] or model
     """
     Analyze and summarize a text.
 
@@ -262,14 +269,7 @@ def summarize_text_command(ctx, text, api_key, output, template, params, provide
     - Sentiment analysis
     """
     try:
-        # Configurar el proveedor de IA
-        if provider.lower() == 'openai':
-            if not api_key:
-                logger.error("OpenAI API key not provided")
-                sys.exit(1)
-            os.environ["OPENAI_API_KEY"] = api_key
-            if hasattr(openai, 'api_key'):
-                openai.api_key = api_key
+        # Configure AI provider (already done by helper above)
                 
         template_params = json.loads(params) if params else {}
         
@@ -352,19 +352,23 @@ def summarize_text_command(ctx, text, api_key, output, template, params, provide
 def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output_dir, token, api_key, output, template, provider, model, 
                           thread_ts, user_id, only_threads, with_reactions, summary, list_channels, include_private, include_archived,
                           max_channels, min_messages, workers, auto_join):
-    # Obtener las opciones globales del contexto
-    local = ctx.obj.get('local', False)
-    text_model = ctx.obj.get('text_model', 'facebook/bart-large-cnn')
-    
-    # Si se especifica --local, usar el proveedor local
-    if local:
-        provider = "local"
-        model = text_model
-        # No se necesita API key para modelos locales
-        api_key = None
-        logger.info("Usando modelos locales para procesamiento (modo offline)")
-    elif not api_key and provider == "openai" and not list_channels:
-        api_key = click.prompt('OpenAI API key', hide_input=True)
+    # Configure provider using helper (only if needed for analysis)
+    if not list_channels:
+        try:
+            provider_config = _configure_provider_from_context(ctx, provider, api_key, model)
+            provider = provider_config['provider']
+            api_key = provider_config['api_key']
+            model = provider_config['model_id'] or model
+        except ProviderConfigurationError as e:
+            if 'API key is required' in str(e):
+                # Only prompt for API key if we're not just listing channels
+                api_key = click.prompt('OpenAI API key', hide_input=True)
+                provider_config = _configure_provider_from_context(ctx, provider, api_key, model)
+                provider = provider_config['provider']
+                api_key = provider_config['api_key']
+                model = provider_config['model_id'] or model
+            else:
+                raise
     """
     Analyze and summarize a Slack channel or thread.
 
@@ -838,14 +842,7 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
         # Prepare text for analysis
         transcription_text = "\n".join([msg.get('text', '') for msg in messages])
         
-        # Configurar el proveedor de IA
-        if provider.lower() == 'openai':
-            if not api_key:
-                logger.error("OpenAI API key not provided")
-                sys.exit(1)
-            os.environ["OPENAI_API_KEY"] = api_key
-            if hasattr(openai, 'api_key'):
-                openai.api_key = api_key
+        # Configure AI provider (already done by helper above)
         
         # Crear el cliente de análisis con el proveedor seleccionado
         from src.transcription.meeting_analyzer import AnalysisClient
@@ -904,19 +901,11 @@ def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output
 @click.option('--max-size', default=100, help='Maximum audio file size in MB before applying more aggressive optimization')
 @click.pass_context
 def listen_command(ctx, duration, output_dir, api_key, output, template, no_cache, provider, model, keep_silence, optimize, max_size):
-    # Obtener las opciones globales del contexto
-    local = ctx.obj.get('local', False)
-    whisper_size = ctx.obj.get('whisper_size', 'base')
-    
-    # Si se especifica --local, usar el proveedor local
-    if local:
-        provider = "local"
-        model = whisper_size
-        # No se necesita API key para modelos locales
-        api_key = None
-        logger.info("Usando modelos locales para procesamiento (modo offline)")
-    elif not api_key and provider == "openai":
-        api_key = click.prompt('OpenAI API key', hide_input=True)
+    # Configure provider using helper
+    provider_config = _configure_provider_from_context(ctx, provider, api_key, model)
+    provider = provider_config['provider']
+    api_key = provider_config['api_key']
+    model = provider_config['model_id'] or model
     """
     Listen and transcribe system audio in real-time.
     
