@@ -1,65 +1,28 @@
+"""
+Refactored CLI with improved structure and service layer separation.
+This demonstrates the refactoring improvements while maintaining backward compatibility.
+"""
 import sys
-import logging
-import glob
-import click
 import os
-import json
-import openai
-import time
-import concurrent.futures
-from typing import Optional
-from tqdm import tqdm
-from src.transcription.meeting_minutes import (
-    AudioTranscriptionService,
-    MeetingAnalyzer, 
-    DocumentManager,
-    VideoDownloader
-)
-from src.slack.download_slack_channel import SlackDownloader, SlackConfig
-from src.slack.http_client import RequestsClient
-from src.slack.pagination import SlackPaginator
-from src.slack.user_cache import SlackUserCache
-from src.slack.filters import SlackMessageFilter
-from src.slack.exceptions import SlackAPIError, SlackRateLimitError
-from src.exporters.json_exporter import JSONExporter
-from src.transcription.exceptions import MeetingMinutesError
-from src.utils.audio_extractor import AudioExtractor
+import click
+from pathlib import Path
 
+from src.config.command_configs import (
+    MediaTranscriptionConfig,
+    TextAnalysisConfig,
+    SlackAnalysisConfig,
+    AudioCaptureConfig
+)
+from src.config.provider_manager import ProviderConfigurationManager
+from src.services.media_service import MediaTranscriptionService
+from src.services.text_service import TextAnalysisService
+from src.services.slack_service import SlackAnalysisService
+from src.utils.error_handlers import handle_common_cli_errors, handle_slack_errors
 from src.utils.logging_utils import setup_logging
-from src.utils.provider_helper import ProviderConfigHelper
-from src.exceptions import ProviderConfigurationError
 
 # Configure logging
 logger = setup_logging('cli_agent.log')
 
-def _configure_provider_from_context(ctx, provider, api_key, model=None):
-    """
-    Configure provider settings from context and parameters.
-    Reduces code duplication across CLI commands.
-    """
-    local = ctx.obj.get('local', False)
-    whisper_size = ctx.obj.get('whisper_size', 'base')
-    text_model = ctx.obj.get('text_model', 'facebook/bart-large-cnn')
-    
-    try:
-        config = ProviderConfigHelper.configure_provider(
-            provider=provider,
-            api_key=api_key,
-            local=local,
-            whisper_size=whisper_size,
-            text_model=text_model
-        )
-        
-        # Override model if specifically provided
-        if model and not local:
-            config['model_id'] = model
-            
-        return config
-    except ProviderConfigurationError as e:
-        if 'API key is required' in str(e) and provider == 'openai':
-            api_key = click.prompt('OpenAI API key', hide_input=True)
-            return _configure_provider_from_context(ctx, provider, api_key, model)
-        raise
 
 @click.group()
 @click.option('--local', is_flag=True, help='Use local models instead of API-based ones')
@@ -69,851 +32,215 @@ def _configure_provider_from_context(ctx, provider, api_key, model=None):
 @click.pass_context
 def cli(ctx, local, offline, whisper_size, text_model):
     """Samuelizer - AI-powered summarization tool."""
-    # Store options in context to make them available in all commands
     ctx.ensure_object(dict)
     ctx.obj['local'] = local or offline
     ctx.obj['whisper_size'] = whisper_size
     ctx.obj['text_model'] = text_model
-    pass
+
 
 @cli.command('media')
 @click.argument('file_path')
-@click.option('--api_key', help='API key for the selected provider.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
-@click.option('--drive_url', required=False, help='Google Drive URL to download media file.')
-@click.option('--optimize', default='128k', help='Target bitrate for audio optimization (e.g. 32k, 64k, 128k)')
-@click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
-@click.option('--template', default='summary', help='Analysis template to use (summary, executive, quick)')
+@click.option('--api_key', help='API key for the selected provider.', 
+              default=lambda: os.environ.get('OPENAI_API_KEY', None))
+@click.option('--drive_url', help='Google Drive URL to download media file.')
+@click.option('--optimize', default='128k', help='Target bitrate for audio optimization')
+@click.option('--output', help='Save results to a DOCX file', type=click.Path())
+@click.option('--template', default='summary', help='Analysis template to use')
 @click.option('--diarization', is_flag=True, help='Enable speaker diarization')
 @click.option('--no-cache', is_flag=True, help='Disable transcription caching')
-@click.option('--provider', default='openai', help='AI provider to use (e.g., openai, local)')
+@click.option('--provider', default='openai', help='AI provider to use')
 @click.option('--model', default='whisper-1', help='Model ID to use for transcription')
 @click.option('--keep-silence', is_flag=True, help='Do not remove long silences from audio')
-@click.option('--max-size', default=100, help='Maximum audio file size in MB before applying more aggressive optimization')
-@click.option('--output-audio', help='Save optimized audio to a specific file', required=False, type=click.Path())
+@click.option('--max-size', default=100, help='Maximum audio file size in MB')
+@click.option('--output-audio', help='Save optimized audio to a specific file', type=click.Path())
 @click.pass_context
-def transcribe_media(ctx, file_path, api_key, drive_url, optimize, output, template, diarization, no_cache, provider, model, keep_silence, max_size, output_audio=None):
-    # Configure provider using helper
-    provider_config = _configure_provider_from_context(ctx, provider, api_key, model)
-    provider = provider_config['provider']
-    api_key = provider_config['api_key']
-    model = provider_config['model_id'] or model
-    
-    # Expandir la ruta del usuario
-    file_path = os.path.expanduser(file_path)
-    
-    # Verificar que el archivo existe
-    if not os.path.exists(file_path):
-        logger.error(f"File does not exist: {file_path}")
-        sys.exit(1)
+@handle_common_cli_errors
+def transcribe_media(ctx, file_path, api_key, drive_url, optimize, output, template, 
+                    diarization, no_cache, provider, model, keep_silence, max_size, output_audio):
     """
     Summarize and analyze any media file (video or audio).
-
+    
     FILE_PATH: Path to media file
     Supported formats: mp4, avi, mkv, mov, wmv, flv, webm, mp3, wav, m4a, aac, ogg
-    
-    The file will be:
-    1. Optimized for processing (if needed)
-    2. Transcribed to text
-    3. Analyzed to extract:
-       - Abstract summary
-       - Key points
-       - Action items
-       - Sentiment analysis
     """
-    supported_formats = AudioExtractor.get_supported_formats()
-    file_ext = os.path.splitext(file_path)[1].lower()
+    # Create configuration object
+    config = MediaTranscriptionConfig(
+        file_path=file_path,
+        drive_url=drive_url,
+        optimize=optimize,
+        output=Path(output) if output else None,
+        template=template,
+        diarization=diarization,
+        no_cache=no_cache,
+        provider=provider,
+        model=model,
+        api_key=api_key,
+        keep_silence=keep_silence,
+        max_size=max_size,
+        output_audio=Path(output_audio) if output_audio else None
+    )
     
-    if file_ext not in supported_formats:
-        logger.error(f"Unsupported file format. Supported formats: {', '.join(supported_formats)}")
-        sys.exit(1)
-    try:
-        # Configure AI provider (already done by helper above)
-            
-        if drive_url:
-            video_file = VideoDownloader.download_from_google_drive(drive_url)
-            file_path = video_file
+    # Configure provider
+    provider_config = ProviderConfigurationManager.configure_provider(
+        ctx, config.provider, config.api_key, config.model
+    )
+    
+    # Process media file using service
+    service = MediaTranscriptionService(config)
+    results = service.process_media_file(provider_config)
+    
+    # Display results
+    _display_analysis_results(results, "Samuelization Summary")
 
-        # Check if file is already MP3
-        if file_path.lower().endswith('.mp3'):
-            audio_file = file_path
-        else:
-            # Extract audio from video and optimize it
-            from src.utils.audio_optimizer import AudioOptimizer
-            
-            audio_file = AudioExtractor.extract_audio(
-                file_path, 
-                target_bitrate=optimize,
-                remove_silences=not keep_silence,
-                max_size_mb=max_size
-            )
-        
-        # Transcribe audio
-        logger.info(f"Starting file transcription: {audio_file}")
-        try:
-            # Pass the no_cache flag and provider info to the transcription service
-            use_cache = not no_cache
-            
-            # Importar las clases necesarias
-            from src.transcription.meeting_transcription import TranscriptionClient, AudioTranscriptionService
-            from src.transcription.audio_processor import AudioFileHandler, TranscriptionFileWriter, SpeakerDiarization
-            
-            # Crear el cliente de transcripción con el proveedor seleccionado
-            transcription_client = TranscriptionClient(
-                provider_name=provider,
-                api_key=api_key
-            )
-            
-            # Configurar el servicio de transcripción
-            service = AudioTranscriptionService(
-                transcription_client=transcription_client,
-                diarization_service=SpeakerDiarization(),
-                audio_file_handler=AudioFileHandler(),
-                file_writer=TranscriptionFileWriter(),
-                model_id=model,
-                provider_name=provider,
-                api_key=api_key
-            )
-            
-            transcription = service.transcribe(
-                audio_file, 
-                diarization=diarization, 
-                use_cache=use_cache
-            )
-            logger.info(f"Transcription completed. Text length: {len(transcription)} characters")
-            
-            # Save transcription to a text file if not already done by the service
-            output_txt = os.path.splitext(audio_file)[0] + "_transcription.txt"
-            if not os.path.exists(output_txt):
-                with open(output_txt, 'w', encoding='utf-8') as f:
-                    f.write(transcription)
-                logger.info(f"Transcription saved to: {output_txt}")
-        except Exception as e:
-            logger.error(f"Error during transcription: {str(e)}")
-            raise
-        
-        # Crear el cliente de análisis con el proveedor seleccionado
-        from src.transcription.meeting_analyzer import AnalysisClient
-        analysis_client = AnalysisClient(
-            provider_name=provider,
-            api_key=api_key,
-            model_id=model
-        )
-        
-        analyzer = MeetingAnalyzer(
-            transcription=transcription,
-            analysis_client=analysis_client
-        )
-        
-        if template == 'all':
-            meeting_info = {}
-            with tqdm(total=4, desc="Analyzing content", unit="task") as pbar:
-                meeting_info['abstract_summary'] = analyzer.summarize()
-                pbar.update(1)
-                meeting_info['key_points'] = analyzer.extract_key_points()
-                pbar.update(1)
-                meeting_info['action_items'] = analyzer.extract_action_items()
-                pbar.update(1)
-                meeting_info['sentiment'] = analyzer.analyze_sentiment()
-                pbar.update(1)
-        else:
-            result = analyzer.analyze(template)
-            meeting_info = {template: result}
-
-        # Display results in CLI
-        click.echo("\n=== Samuelization Summary ===")
-        for key, value in meeting_info.items():
-            click.echo(f"\n{key.replace('_', ' ').title()}:")
-            click.echo("-" * 40)
-            click.echo(value)
-            click.echo()
-
-        # Save to docx if requested
-        if output:
-            DocumentManager.save_to_docx(meeting_info, output)
-            logger.info(f"Document saved: {output}")
-
-    except MeetingMinutesError as e:
-        logger.error(f"Error transcribing video: {e}")
-        sys.exit(1)
-    except KeyboardInterrupt:
-        logger.info("Process interrupted by user.")
-        sys.exit(0)
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}")
-        sys.exit(1)
 
 @cli.command('text')
 @click.argument('text')
-@click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
-@click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
+@click.option('--api_key', help='OpenAI API key.', 
+              default=lambda: os.environ.get('OPENAI_API_KEY', None))
+@click.option('--output', help='Save results to a DOCX file', type=click.Path())
 @click.option('--template', default='summary', help='Analysis template to use')
 @click.option('--params', help='Additional template parameters in JSON format')
-@click.option('--provider', default='openai', help='AI provider to use (e.g., openai, local)')
+@click.option('--provider', default='openai', help='AI provider to use')
 @click.option('--model', default='gpt-4', help='Model ID to use for analysis')
 @click.pass_context
+@handle_common_cli_errors
 def summarize_text_command(ctx, text, api_key, output, template, params, provider, model):
-    # Configure provider using helper
-    provider_config = _configure_provider_from_context(ctx, provider, api_key, model)
-    provider = provider_config['provider']
-    api_key = provider_config['api_key']
-    model = provider_config['model_id'] or model
     """
     Analyze and summarize a text.
-
-    TEXT: Text to analyze
     
-    The text will be analyzed to extract:
-    - Abstract summary
-    - Key points
-    - Action items
-    - Sentiment analysis
+    TEXT: Text to analyze
     """
-    try:
-        # Configure AI provider (already done by helper above)
-                
-        template_params = json.loads(params) if params else {}
-        
-        # Crear el cliente de análisis con el proveedor seleccionado
-        from src.transcription.meeting_analyzer import AnalysisClient
-        analysis_client = AnalysisClient(
-            provider_name=provider,
-            api_key=api_key,
-            model_id=model
-        )
-        
-        analyzer = MeetingAnalyzer(
-            transcription=text,
-            analysis_client=analysis_client
-        )
-        
-        if template == 'all':
-            meeting_info = {
-                'abstract_summary': analyzer.summarize(**template_params),
-                'key_points': analyzer.extract_key_points(**template_params),
-                'action_items': analyzer.extract_action_items(**template_params),
-                'sentiment': analyzer.analyze_sentiment(**template_params)
-            }
-        else:
-            result = analyzer.analyze(template, **template_params)
-            meeting_info = {template: result}
+    # Create configuration object
+    config = TextAnalysisConfig(
+        text=text,
+        output=Path(output) if output else None,
+        template=template,
+        params=params,
+        provider=provider,
+        model=model,
+        api_key=api_key
+    )
+    
+    # Configure provider
+    provider_config = ProviderConfigurationManager.configure_provider(
+        ctx, config.provider, config.api_key, config.model
+    )
+    
+    # Analyze text using service
+    service = TextAnalysisService(config)
+    results = service.analyze_text(provider_config)
+    
+    # Display results
+    _display_analysis_results(results, "Text Summary")
 
-        # Display results in CLI
-        click.echo("\n=== Text Summary ===")
-        for key, value in meeting_info.items():
-            click.echo(f"\n{key.replace('_', ' ').title()}:")
-            click.echo("-" * 40)
-            click.echo(value)
-            click.echo()
-
-        # Save to docx if requested
-        if output:
-            DocumentManager.save_to_docx(meeting_info, output)
-            logger.info(f"Document saved: {output}")
-    except MeetingMinutesError as e:
-        logger.error(f"Error summarizing text: {e}")
-        sys.exit(1)
-    except KeyboardInterrupt:
-        logger.info("Process interrupted by user.")
-        sys.exit(0)
-    except openai.AuthenticationError as e:
-        logger.error(f"OpenAI Authentication Error: {e}")
-        sys.exit(1)
-    except openai.APIError as e:
-        logger.error(f"OpenAI API Error: {e}")
-        sys.exit(1)
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}")
-        sys.exit(1)
 
 @cli.command('slack')
 @click.argument('channel_id_or_link', required=False)
-@click.option('--start-date', type=click.DateTime(formats=["%Y-%m-%d"]), help='Start date in YYYY-MM-DD format')
-@click.option('--end-date', type=click.DateTime(formats=["%Y-%m-%d"]), help='End date in YYYY-MM-DD format')
+@click.option('--start-date', type=click.DateTime(formats=["%Y-%m-%d"]), 
+              help='Start date in YYYY-MM-DD format')
+@click.option('--end-date', type=click.DateTime(formats=["%Y-%m-%d"]), 
+              help='End date in YYYY-MM-DD format')
 @click.option('--output-dir', default='slack_exports', help='Directory to save messages')
-@click.option('--token', help='Slack token. Can also use SLACK_TOKEN env var', default=lambda: os.environ.get('SLACK_TOKEN', None))
-@click.option('--thread-ts', help='Thread timestamp to fetch replies from a specific thread')
+@click.option('--token', help='Slack token', 
+              default=lambda: os.environ.get('SLACK_TOKEN', None))
+@click.option('--thread-ts', help='Thread timestamp to fetch replies from')
 @click.option('--user-id', help='Filter messages by user ID')
 @click.option('--only-threads', is_flag=True, help='Only fetch messages that have replies')
 @click.option('--with-reactions', is_flag=True, help='Only fetch messages that have reactions')
-@click.option('--api_key', help='OpenAI API key.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
-@click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
-@click.option('--template', default='summary', help='Analysis template to use (summary, executive, quick)')
-@click.option('--provider', default='openai', help='AI provider to use (e.g., openai, local)')
+@click.option('--api_key', help='OpenAI API key.', 
+              default=lambda: os.environ.get('OPENAI_API_KEY', None))
+@click.option('--output', help='Save results to a DOCX file', type=click.Path())
+@click.option('--template', default='summary', help='Analysis template to use')
+@click.option('--provider', default='openai', help='AI provider to use')
 @click.option('--model', default='gpt-4', help='Model ID to use for analysis')
-@click.option('--summary', is_flag=True, help='Generate a global summary of all Slack activity in a date range')
-@click.option('--list-channels', is_flag=True, help='List all Slack channels accessible with the provided token')
+@click.option('--summary', is_flag=True, help='Generate a global summary of all Slack activity')
+@click.option('--list-channels', is_flag=True, help='List all Slack channels')
 @click.option('--include-private/--public-only', default=True, help='Include private channels and DMs')
 @click.option('--include-archived/--active-only', default=False, help='Include archived channels')
-@click.option('--max-channels', default=10, type=int, help='Maximum number of channels to analyze (0 for all, >10 includes all channels even if bot is not a member)')
-@click.option('--min-messages', default=5, type=int, help='Minimum number of messages in a channel to include it')
-@click.option('--workers', default=0, type=int, help='Number of parallel workers for downloading (0 = auto)')
-@click.option('--auto-join', is_flag=True, help='Automatically join channels before downloading messages')
+@click.option('--max-channels', default=10, type=int, help='Maximum number of channels to analyze')
+@click.option('--min-messages', default=5, type=int, help='Minimum number of messages in a channel')
+@click.option('--workers', default=0, type=int, help='Number of parallel workers for downloading')
+@click.option('--auto-join', is_flag=True, help='Automatically join channels before downloading')
 @click.pass_context
-def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output_dir, token, api_key, output, template, provider, model, 
-                          thread_ts, user_id, only_threads, with_reactions, summary, list_channels, include_private, include_archived,
-                          max_channels, min_messages, workers, auto_join):
-    # Configure provider using helper (only if needed for analysis)
-    if not list_channels:
-        try:
-            provider_config = _configure_provider_from_context(ctx, provider, api_key, model)
-            provider = provider_config['provider']
-            api_key = provider_config['api_key']
-            model = provider_config['model_id'] or model
-        except ProviderConfigurationError as e:
-            if 'API key is required' in str(e):
-                # Only prompt for API key if we're not just listing channels
-                api_key = click.prompt('OpenAI API key', hide_input=True)
-                provider_config = _configure_provider_from_context(ctx, provider, api_key, model)
-                provider = provider_config['provider']
-                api_key = provider_config['api_key']
-                model = provider_config['model_id'] or model
-            else:
-                raise
+@handle_common_cli_errors
+@handle_slack_errors
+def analyze_slack_messages(ctx, channel_id_or_link, start_date, end_date, output_dir, token, 
+                          api_key, output, template, provider, model, thread_ts, user_id, 
+                          only_threads, with_reactions, summary, list_channels, include_private, 
+                          include_archived, max_channels, min_messages, workers, auto_join):
     """
     Analyze and summarize a Slack channel or thread.
-
-    CHANNEL_ID_OR_LINK: Slack channel ID (e.g., C01234567) or a Slack message link
     
-    You can use:
-    1. Channel ID (e.g., C01234567)
-    2. Slack link to a channel (https://workspace.slack.com/archives/C01234567)
-    3. Slack link to a message or thread (https://workspace.slack.com/archives/C01234567/p1234567890123456)
-    
-    The channel messages will be:
-    1. Downloaded and saved as JSON
-    2. Analyzed to extract:
-       - Abstract summary
-       - Key points
-       - Action items
-       - Sentiment analysis
-    3. Results saved as DOCX
-    
-    Required:
-    - SLACK_TOKEN or --token: Slack Bot User OAuth Token
-    - OPENAI_API_KEY or --api_key: OpenAI API key
+    CHANNEL_ID_OR_LINK: Slack channel ID or Slack message link
     """
-    try:
-        # Importar la función para parsear enlaces de Slack
-        from src.slack.utils import parse_slack_link
-        
-        # Verificar si tenemos un channel_id_or_link
-        if channel_id_or_link:
-            # Verificar si es un enlace de Slack o un ID de canal
-            if channel_id_or_link.startswith('http'):
-                # Es un enlace de Slack, extraer el ID del canal y posiblemente el timestamp
-                channel_id, link_thread_ts = parse_slack_link(channel_id_or_link)
-                if not channel_id:
-                    logging.error("Invalid Slack link. Could not extract channel ID.")
-                    sys.exit(1)
-            
-                # Si se encontró un timestamp en el enlace y no se especificó --thread-ts, usarlo
-                if link_thread_ts and not thread_ts:
-                    thread_ts = link_thread_ts
-                    logging.info(f"Usando timestamp del enlace: {thread_ts}")
-            else:
-                # Es un ID de canal directamente
-                channel_id = channel_id_or_link
-        else:
-            # No se proporcionó un channel_id_or_link, verificar si estamos usando --list-channels o --summary
-            if not list_channels and not summary:
-                logging.error("Se requiere un ID de canal o enlace para analizar mensajes de Slack")
-                sys.exit(1)
-            channel_id = None  # Para --list-channels o --summary no necesitamos un channel_id específico
-        
-        # Create configuration
-        slack_config = SlackConfig(
-            token=token,
-            channel_id=channel_id,
-            start_date=start_date,
-            end_date=end_date,
-            output_dir=output_dir,
-            auto_join=auto_join
-        )
-        
-        # Create services with dependency injection
-        http_client = RequestsClient()
-        
-        # Verificar si estamos usando --list-channels o --summary
-        if list_channels:
-            try:
-                from src.slack.channel_lister import SlackChannelLister
-                        
-                # Crear el listador de canales
-                channel_lister = SlackChannelLister(token, http_client)
-                        
-                # Obtener la lista de canales
-                logging.info("Obteniendo lista de canales de Slack...")
-                channels = channel_lister.list_channels(
-                    include_private=include_private,
-                    include_archived=include_archived
-                )
-                
-                # Enriquecer la información de los canales
-                enriched_channels = channel_lister.get_channel_details(channels)
-                
-                # Mostrar información sobre la cantidad de canales
-                total_channels = len(enriched_channels)
-                if total_channels > 100:
-                    logger.info(f"Se detectaron {total_channels} canales. Para analizar todos, use --max-channels 0")
-                    logger.info(f"To limit analysis to a specific number, use --max-channels N")
-                
-                # Formatear para mostrar
-                formatted_text = channel_lister.format_channels_for_display(enriched_channels)
-                
-                # Mostrar en la consola
-                click.echo(formatted_text)
-                
-                # Guardar en archivo si se especificó
-                if output:
-                    with open(output, 'w', encoding='utf-8') as f:
-                        f.write(formatted_text)
-                    logging.info(f"Resultados guardados en: {output}")
-                    
-                    # También guardar versión JSON para uso programático
-                    import json
-                    json_output = f"{os.path.splitext(output)[0]}.json"
-                    with open(json_output, 'w', encoding='utf-8') as f:
-                        json.dump(enriched_channels, f, ensure_ascii=False, indent=2)
-                    logging.info(f"Datos JSON guardados en: {json_output}")
-                
-                return
-                
-            except Exception as e:
-                logging.error(f"Error al listar canales de Slack: {str(e)}")
-                sys.exit(1)
-        
-        # Manejar el comando --summary
-        elif summary:
-            if not start_date or not end_date:
-                logger.error("Para generar un resumen global se requieren --start-date y --end-date")
-                sys.exit(1)
-                
-            try:
-                # Importar las clases necesarias
-                from src.slack.channel_lister import SlackChannelLister
-                
-                # Verificar que el token no esté vacío
-                if not token:
-                    logger.error("No Slack token provided. Use --token or set the SLACK_TOKEN environment variable.")
-                    sys.exit(1)
-                
-                # Paso 1: Listar todos los canales accesibles
-                logger.info("Obteniendo lista de canales de Slack...")
-                try:
-                    channel_lister = SlackChannelLister(token, http_client)
-                    channels = channel_lister.list_channels(include_private=include_private, include_archived=False)
-                except SlackAPIError as e:
-                    if "invalid_auth" in str(e):
-                        logger.error("Slack authentication error. Verify that your token is valid and has necessary permissions.")
-                        logger.info("If using a user token (xoxp), ensure it has not expired.")
-                        logger.info("If using a bot token (xoxb), ensure the bot is installed in the workspace.")
-                    raise
-                
-                # Enriquecer la información de los canales
-                enriched_channels = channel_lister.get_channel_details(channels)
-                
-                # Determinar si estamos usando un token de usuario o de bot
-                from src.slack.utils import is_user_token
-                is_user = is_user_token(token)
-                
-                # Determinar qué canales incluir basado en el tipo de token y los parámetros
-                if is_user:
-                    # Para tokens de usuario, incluir todos los canales accesibles
-                    member_channels = enriched_channels
-                    logger.info(f"Usando token de usuario: acceso a {len(member_channels)} canales")
-                else:
-                    # Para tokens de bot, verificar si queremos forzar la inclusión de todos los canales
-                    if max_channels > 10:  # Si se solicitan más de 10 canales, incluir todos aunque el bot no sea miembro
-                        member_channels = enriched_channels
-                        logger.info(f"Usando token de bot con --max-channels {max_channels}: incluyendo todos los {len(member_channels)} canales disponibles")
-                    else:
-                        # Comportamiento predeterminado: solo canales donde el bot es miembro
-                        member_channels = [c for c in enriched_channels if c.get('is_member', False)]
-                        logger.info(f"Usando token de bot: acceso a {len(member_channels)} canales donde el bot es miembro")
-                
-                # Limitar el número de canales si se especificó
-                if max_channels > 0 and len(member_channels) > max_channels:
-                    logger.info(f"Limiting analysis to {max_channels} channels (of {len(member_channels)} available)")
-                    member_channels = member_channels[:max_channels]
-                else:
-                    logger.info(f"Analizando todos los {len(member_channels)} canales disponibles")
-                
-                # Añadir mensaje de depuración para verificar el número real de canales
-                logger.info(f"Actual number of channels to analyze: {len(member_channels)}")
-                
-                logger.info(f"Analizando canales en el rango de fechas: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
-                
-                # Crear directorio de salida si no existe
-                os.makedirs(output_dir, exist_ok=True)
-                
-                # Paso 2: Descargar mensajes de todos los canales en el rango de fechas
-                all_messages = []
-                channel_messages = {}
-                exporter = JSONExporter()
-                
-                # Función para descargar mensajes de un canal específico
-                def download_channel_messages(channel):
-                    channel_id = channel['id']
-                    channel_name = channel['name']
-                    
-                    # Configuración para este canal
-                    channel_config = SlackConfig(
-                        token=token,
-                        channel_id=channel_id,
-                        start_date=start_date,
-                        end_date=end_date,
-                        output_dir=output_dir,
-                        auto_join=auto_join
-                    )
-                    
-                    # Crear el descargador
-                    channel_downloader = SlackDownloader(channel_config, http_client)
-                    
-                    try:
-                        # Descargar mensajes
-                        messages = channel_downloader.fetch_messages()
-                        
-                        # Filtrar por fecha
-                        messages = SlackMessageFilter.by_date_range(messages, start_date, end_date)
-                        
-                        # Añadir información del canal a cada mensaje
-                        for msg in messages:
-                            msg['_channel_id'] = channel_id
-                            msg['_channel_name'] = channel_name
-                        
-                        return {
-                            'channel_id': channel_id,
-                            'channel_name': channel_name,
-                            'messages': messages,
-                            'success': True
-                        }
-                    except SlackAPIError as e:
-                        error_str = str(e)
-                        if "not_in_channel" in error_str:
-                            logger.warning(f"No se pudo acceder al canal {channel_name} ({channel_id}): no eres miembro")
-                        else:
-                            logger.warning(f"Error al descargar mensajes del canal {channel_name} ({channel_id}): {error_str}")
-                        return {
-                            'channel_id': channel_id,
-                            'channel_name': channel_name,
-                            'messages': [],
-                            'success': False,
-                            'error': error_str
-                        }
-                    except Exception as e:
-                        logger.warning(f"Error al descargar mensajes del canal {channel_name} ({channel_id}): {str(e)}")
-                        return {
-                            'channel_id': channel_id,
-                            'channel_name': channel_name,
-                            'messages': [],
-                            'success': False,
-                            'error': str(e)
-                        }
-                
-                # Determinar el número máximo de trabajadores (hilos)
-                if workers > 0:
-                    max_workers = workers
-                else:
-                    max_workers = min(32, os.cpu_count() * 4)  # Limitar a 32 o 4 veces el número de núcleos
-                logger.info(f"Descargando mensajes en paralelo con {max_workers} trabajadores")
-                
-                # Usar ThreadPoolExecutor para paralelizar las descargas
-                with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    # Iniciar todas las tareas de descarga
-                    future_to_channel = {executor.submit(download_channel_messages, channel): channel for channel in member_channels}
-                    
-                    # Crear una barra de progreso
-                    with tqdm(total=len(future_to_channel), desc="Descargando mensajes de canales", unit="canal") as pbar:
-                        # Procesar los resultados a medida que se completan
-                        for future in concurrent.futures.as_completed(future_to_channel):
-                            result = future.result()
-                            channel_id = result['channel_id']
-                            channel_name = result['channel_name']
-                            messages = result['messages']
-                            
-                            # Actualizar la barra de progreso
-                            pbar.update(1)
-                            
-                            # Solo incluir canales con suficientes mensajes
-                            if len(messages) >= min_messages:
-                                # Guardar mensajes
-                                all_messages.extend(messages)
-                                channel_messages[channel_id] = {
-                                    'name': channel_name,
-                                    'message_count': len(messages),
-                                    'messages': messages
-                                }
-                                
-                                # Exportar mensajes de este canal
-                                exporter.export_messages(
-                                    messages,
-                                    channel_id,
-                                    output_dir,
-                                    start_date=start_date,
-                                    end_date=end_date
-                                )
-                                
-                                logger.info(f"Canal {channel_name} ({channel_id}): {len(messages)} mensajes")
-                            else:
-                                logger.info(f"Channel {channel_name} ({channel_id}): only {len(messages)} messages (minimum: {min_messages})")
-                
-                if not all_messages:
-                    logger.error("No se encontraron mensajes en el rango de fechas especificado.")
-                    sys.exit(1)
-                    
-                logger.info(f"Total de mensajes descargados: {len(all_messages)}")
-                
-                # Paso 3: Preparar datos para análisis
-                
-                # Ordenar todos los mensajes por timestamp
-                all_messages.sort(key=lambda x: float(x.get('ts', 0)))
-                
-                # Exportar todos los mensajes juntos
-                combined_output = os.path.join(output_dir, f"slack_global_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.json")
-                with open(combined_output, 'w', encoding='utf-8') as f:
-                    import json
-                    json.dump({
-                        'start_date': start_date.strftime('%Y-%m-%d'),
-                        'end_date': end_date.strftime('%Y-%m-%d'),
-                        'channel_count': len(channel_messages),
-                        'message_count': len(all_messages),
-                        'channels': channel_messages
-                    }, f, ensure_ascii=False, indent=2)
-                
-                logger.info(f"Datos combinados guardados en: {combined_output}")
-                
-                # Paso 4: Analizar mensajes
-                
-                # Crear cliente de análisis
-                from src.transcription.meeting_analyzer import AnalysisClient
-                analysis_client = AnalysisClient(
-                    provider_name=provider,
-                    api_key=api_key,
-                    model_id=model
-                )
-                
-                # Registrar plantilla personalizada para resumen global
-                from src.transcription.templates import PromptTemplates
-                templates = PromptTemplates()
-                
-                # Preparar texto para análisis
-                # Limitamos a un número manejable de mensajes para evitar exceder límites de tokens
-                max_messages_for_analysis = 1000
-                if len(all_messages) > max_messages_for_analysis:
-                    logger.warning(f"Limiting analysis to {max_messages_for_analysis} messages (of {len(all_messages)} total)")
-                    # Seleccionar mensajes distribuidos uniformemente
-                    step = len(all_messages) // max_messages_for_analysis
-                    selected_messages = all_messages[::step]
-                else:
-                    selected_messages = all_messages
-                
-                # Formatear mensajes para análisis
-                formatted_messages = []
-                for msg in selected_messages:
-                    channel_name = msg.get('_channel_name', 'desconocido')
-                    user_name = msg.get('user_info', msg.get('user', 'desconocido'))
-                    text = msg.get('text', '')
-                    ts = float(msg.get('ts', 0))
-                    date_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
-                    
-                    formatted_msg = f"[{date_str}] #{channel_name} - {user_name}: {text}"
-                    formatted_messages.append(formatted_msg)
-                
-                analysis_text = "\n".join(formatted_messages)
-                
-                # Crear analizador
-                analyzer = MeetingAnalyzer(
-                    transcription=analysis_text,
-                    analysis_client=analysis_client
-                )
-                
-                # Realizar análisis con parámetros adicionales
-                template_params = {
-                    'start_date': start_date.strftime('%Y-%m-%d'),
-                    'end_date': end_date.strftime('%Y-%m-%d'),
-                    'channel_count': len(channel_messages)
-                }
-                
-                logger.info("Generando resumen global...")
-                result = analyzer.analyze('global_summary', **template_params)
-                
-                # Mostrar resultados
-                click.echo("\n=== Resumen Global de Slack ===")
-                click.echo(f"Period: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-                click.echo(f"Canales analizados: {len(channel_messages)}")
-                click.echo(f"Total de mensajes: {len(all_messages)}")
-                click.echo("\n" + result)
-                
-                # Guardar resultados en DOCX si se solicitó
-                if output:
-                    from src.transcription.meeting_minutes import DocumentManager
-                    DocumentManager.save_to_docx({'global_summary': result}, output)
-                    logger.info(f"Resumen guardado en: {output}")
-                
-                return
-                
-            except KeyboardInterrupt:
-                logger.info("Proceso interrumpido por el usuario.")
-                sys.exit(0)
-            except Exception as e:
-                logger.error(f"Error inesperado: {str(e)}")
-                import traceback
-                logger.error(traceback.format_exc())
-                sys.exit(1)
-        
-        # Create services with dependency injection
-        http_client = RequestsClient()
-        
-        # Si no estamos usando --list-channels o --summary, proceder con el análisis de canal específico
-        if not list_channels and not summary:
-            downloader = SlackDownloader(slack_config, http_client)
-            exporter = JSONExporter()
-            
-            try:
-                # Download messages
-                if thread_ts:
-                    messages = downloader.fetch_thread_messages(thread_ts)
-                    logging.info(f"Downloaded {len(messages)} messages from thread {thread_ts}")
-                else:
-                    messages = downloader.fetch_messages()
-                    logging.info(f"Downloaded {len(messages)} messages from channel {channel_id}")
-                
-                # Apply filters if specified
-                if user_id:
-                    messages = SlackMessageFilter.by_user(messages, user_id)
-                    logging.info(f"Filtered to {len(messages)} messages from user {user_id}")
-                
-                if only_threads:
-                    messages = SlackMessageFilter.by_has_replies(messages)
-                    logging.info(f"Filtered to {len(messages)} messages with thread replies")
-                
-                if with_reactions:
-                    messages = SlackMessageFilter.by_has_reactions(messages)
-                    logging.info(f"Filtered to {len(messages)} messages with reactions")
-                
-                # Apply date filters if specified
-                if start_date or end_date:
-                    messages = SlackMessageFilter.by_date_range(messages, start_date, end_date)
-            
-                # Export messages to JSON
-                output_file = exporter.export_messages(
-                    messages,
-                    slack_config.channel_id,
-                    slack_config.output_dir,
-                    start_date=slack_config.start_date,
-                    end_date=slack_config.end_date
-                )
-            except SlackRateLimitError as e:
-                logging.error(f"Rate limit exceeded: {e}")
-                logging.info(f"Waiting {e.retry_after} seconds before retrying...")
-                time.sleep(e.retry_after or 60)
-                messages = downloader.fetch_messages()
-                
-                # Export messages to JSON
-                output_file = exporter.export_messages(
-                    messages,
-                    slack_config.channel_id,
-                    slack_config.output_dir,
-                    start_date=slack_config.start_date,
-                    end_date=slack_config.end_date
-                )
-            except SlackAPIError as e:
-                logging.error(f"Slack API error: {e}")
-                sys.exit(1)
-        
-        # Find the latest JSON file
-        json_files = glob.glob(os.path.join(output_dir, f"slack_messages_{channel_id}*.json"))
-        if not json_files:
-            logging.error("No JSON message files found.")
-            sys.exit(1)
-        
-        latest_file = max(json_files, key=os.path.getctime)
-        logging.info(f"Latest message file: {latest_file}")
-        
-        # Load messages from the JSON file
-        with open(latest_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        messages = data.get('messages', [])
-        if not messages:
-            logging.info("No messages to summarize.")
-            sys.exit(0)
-        
-        # Prepare text for analysis
-        transcription_text = "\n".join([msg.get('text', '') for msg in messages])
-        
-        # Configure AI provider (already done by helper above)
-        
-        # Crear el cliente de análisis con el proveedor seleccionado
-        from src.transcription.meeting_analyzer import AnalysisClient
-        analysis_client = AnalysisClient(
-            provider_name=provider,
-            api_key=api_key
-        )
-        
-        # Analyze the messages
-        analyzer = MeetingAnalyzer(
-            transcription=transcription_text,
-            analysis_client=analysis_client
-        )
-        
-        if template == 'all':
-            result = analyzer.analyze('default')
-            meeting_info = {'default': result}
-        else:
-            result = analyzer.analyze(template)
-            meeting_info = {template: result}
-        
-        # Display results in CLI
-        click.echo("\n=== Slack Channel Summary ===")
-        for key, value in meeting_info.items():
-            click.echo(f"\n{key.replace('_', ' ').title()}:")
-            click.echo("-" * 40)
-            click.echo(value)
-            click.echo()
-
-        # Save to docx if requested
-        if output:
-            DocumentManager.save_to_docx(meeting_info, output)
-            logger.info(f"Document saved: {output}")
+    # Create configuration object
+    config = SlackAnalysisConfig(
+        channel_id_or_link=channel_id_or_link,
+        start_date=start_date,
+        end_date=end_date,
+        output_dir=output_dir,
+        token=token,
+        api_key=api_key,
+        output=Path(output) if output else None,
+        template=template,
+        provider=provider,
+        model=model,
+        thread_ts=thread_ts,
+        user_id=user_id,
+        only_threads=only_threads,
+        with_reactions=with_reactions,
+        summary=summary,
+        list_channels=list_channels,
+        include_private=include_private,
+        include_archived=include_archived,
+        max_channels=max_channels,
+        min_messages=min_messages,
+        workers=workers,
+        auto_join=auto_join
+    )
     
-    except MeetingMinutesError as e:
-        logging.error(f"Error processing Slack messages: {e}")
-        sys.exit(1)
-    except KeyboardInterrupt:
-        logging.info("Process interrupted by user.")
-        sys.exit(0)
-    except Exception as e:
-        logging.error(f"Unexpected error while summarizing Slack messages: {e}")
-        sys.exit(1)
+    # Configure provider (only needed for analysis operations)
+    provider_config = None
+    if not config.list_channels:
+        provider_config = ProviderConfigurationManager.configure_provider(
+            ctx, config.provider, config.api_key, config.model
+        )
+    
+    # Process Slack request using service
+    service = SlackAnalysisService(config)
+    result = service.process_slack_request(provider_config)
+    
+    # Display results based on operation type
+    if config.list_channels:
+        click.echo(result)
+    elif config.summary:
+        click.echo("\n=== Global Slack Summary ===")
+        click.echo(f"Period: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        click.echo("\n" + result)
+    else:
+        click.echo("\n=== Slack Channel Summary ===")
+        click.echo("Messages exported and analyzed successfully.")
+
 
 @cli.command('listen')
 @click.option('--duration', type=int, help='Duration in seconds (0 for continuous)', default=0)
 @click.option('--output-dir', default='recordings', help='Directory to save recordings')
-@click.option('--api_key', help='API key for the selected provider.', default=lambda: os.environ.get('OPENAI_API_KEY', None))
-@click.option('--output', help='Save results to a DOCX file', required=False, type=click.Path())
-@click.option('--template', default='summary', help='Analysis template to use (summary, executive, quick)')
+@click.option('--api_key', help='API key for the selected provider.', 
+              default=lambda: os.environ.get('OPENAI_API_KEY', None))
+@click.option('--output', help='Save results to a DOCX file', type=click.Path())
+@click.option('--template', default='summary', help='Analysis template to use')
 @click.option('--no-cache', is_flag=True, help='Disable transcription caching')
-@click.option('--provider', default='openai', help='AI provider to use (e.g., openai)')
+@click.option('--provider', default='openai', help='AI provider to use')
 @click.option('--model', default='whisper-1', help='Model ID to use for transcription')
 @click.option('--keep-silence', is_flag=True, help='Do not remove long silences from audio')
-@click.option('--optimize', default='128k', help='Target bitrate for audio optimization (e.g. 32k, 64k, 128k)')
-@click.option('--max-size', default=100, help='Maximum audio file size in MB before applying more aggressive optimization')
+@click.option('--optimize', default='128k', help='Target bitrate for audio optimization')
+@click.option('--max-size', default=100, help='Maximum audio file size in MB')
 @click.pass_context
-def listen_command(ctx, duration, output_dir, api_key, output, template, no_cache, provider, model, keep_silence, optimize, max_size):
-    # Configure provider using helper
-    provider_config = _configure_provider_from_context(ctx, provider, api_key, model)
-    provider = provider_config['provider']
-    api_key = provider_config['api_key']
-    model = provider_config['model_id'] or model
+@handle_common_cli_errors
+def listen_command(ctx, duration, output_dir, api_key, output, template, no_cache, 
+                  provider, model, keep_silence, optimize, max_size):
     """
     Listen and transcribe system audio in real-time.
-    
-    This will capture all system audio, including:
-    - Video calls (Google Meet, Teams, Zoom)
-    - System sounds
-    - Microphone input
-    - Audio from headphones
     """
     try:
         from src.audio_capture.system_audio import SystemAudioCapture
@@ -923,10 +250,12 @@ def listen_command(ctx, duration, output_dir, api_key, output, template, no_cach
         
         if duration > 0:
             click.echo(f"Recording for {duration} seconds...")
+            import time
             time.sleep(duration)
         else:
             click.echo("Recording... Press Ctrl+C to stop")
             while True:
+                import time
                 time.sleep(1)
                 
     except KeyboardInterrupt:
@@ -935,36 +264,41 @@ def listen_command(ctx, duration, output_dir, api_key, output, template, no_cach
         
         if api_key:
             click.echo("Transcribing recorded audio...")
-            # Importar las clases necesarias aquí para asegurar que estén disponibles
-            from src.transcription.meeting_transcription import TranscriptionClient, AudioTranscriptionService
-            from src.transcription.audio_processor import AudioFileHandler, TranscriptionFileWriter, SpeakerDiarization
             
-            ctx = click.get_current_context()
-            ctx.invoke(transcribe_media, 
-                      file_path=audio_file,
-                      api_key=api_key,
-                      drive_url=None,
-                      optimize=optimize,
-                      output=output,
-                      template=template,
-                      diarization=False,
-                      no_cache=no_cache,
-                      provider=provider,
-                      model=model,
-                      keep_silence=keep_silence,
-                      max_size=max_size)
+            # Create configuration for transcription
+            config = MediaTranscriptionConfig(
+                file_path=audio_file,
+                output=Path(output) if output else None,
+                template=template,
+                no_cache=no_cache,
+                provider=provider,
+                model=model,
+                api_key=api_key,
+                keep_silence=keep_silence,
+                optimize=optimize,
+                max_size=max_size
+            )
+            
+            # Configure provider and process
+            provider_config = ProviderConfigurationManager.configure_provider(
+                ctx, config.provider, config.api_key, config.model
+            )
+            
+            service = MediaTranscriptionService(config)
+            results = service.process_media_file(provider_config)
+            
+            # Display results
+            _display_analysis_results(results, "Recording Analysis")
         else:
             click.echo(f"Audio saved to: {audio_file}")
-            
-    except Exception as e:
-        logger.error(f"Error during recording: {e}")
-        sys.exit(1)
+
 
 @cli.command()
 def version():
     """Displays the CLI agent version."""
     click.echo("samuelizer version 1.1.0")
-    
+
+
 @cli.command('providers')
 def list_providers():
     """Lists available AI providers and their models."""
@@ -991,36 +325,42 @@ def list_providers():
 
 @cli.command('clear-cache')
 @click.option('--confirm', is_flag=True, help='Skip confirmation prompt')
+@handle_common_cli_errors
 def clear_cache(confirm):
     """
     Clear all cached transcriptions.
-    
-    This command removes all cached transcriptions to ensure fresh results
-    on subsequent transcription requests.
     """
     if not confirm:
         if not click.confirm('Are you sure you want to clear all transcription cache?'):
             click.echo("Operation cancelled.")
             return
     
-    try:
-        from src.transcription.cache import FileCache, TranscriptionCacheService
-        
-        # Crear el servicio de caché
-        file_cache = FileCache()
-        cache_service = TranscriptionCacheService(file_cache)
-        
-        # Limpiar toda la caché
-        cache_service.clear_all_cache()
-        
-        click.echo("Transcription cache cleared successfully.")
-    except Exception as e:
-        logger.error(f"Error clearing cache: {e}")
-        sys.exit(1)
+    from src.transcription.cache import FileCache, TranscriptionCacheService
+    
+    # Create cache service
+    file_cache = FileCache()
+    cache_service = TranscriptionCacheService(file_cache)
+    
+    # Clear all cache
+    cache_service.clear_all_cache()
+    
+    click.echo("Transcription cache cleared successfully.")
 
 
-
-
+def _display_analysis_results(results: dict, title: str) -> None:
+    """
+    Display analysis results in a consistent format.
+    
+    Args:
+        results: Dictionary containing analysis results
+        title: Title to display above the results
+    """
+    click.echo(f"\n=== {title} ===")
+    for key, value in results.items():
+        click.echo(f"\n{key.replace('_', ' ').title()}:")
+        click.echo("-" * 40)
+        click.echo(value)
+        click.echo()
 
 
 if __name__ == '__main__':
